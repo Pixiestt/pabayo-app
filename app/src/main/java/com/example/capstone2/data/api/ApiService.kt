@@ -1,0 +1,61 @@
+package com.example.capstone2.data.api
+
+import com.example.capstone2.data.models.CreateRequest
+import com.example.capstone2.data.models.LoginRequest
+import com.example.capstone2.data.models.LoginResponse
+import com.example.capstone2.data.models.NotificationResponse
+import com.example.capstone2.data.models.RegisterRequest
+import com.example.capstone2.data.models.RegisterResponse
+import com.example.capstone2.data.models.Request
+import com.example.capstone2.data.models.RequestResponse
+import com.example.capstone2.data.models.User
+import okhttp3.ResponseBody
+import retrofit2.Response
+import retrofit2.http.*
+
+interface ApiService {
+    @POST("api/register")
+    suspend fun register(@Body request: RegisterRequest): Response<RegisterResponse>
+
+    @POST("api/login")
+    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+
+    @POST("api/requests")
+    suspend fun createRequest(@Body request: CreateRequest): Response<CreateRequest>
+
+    @GET("api/requests")
+    suspend fun getRequests(): Response<RequestResponse>
+
+    @GET("api/owner/requests")
+    suspend fun getOwnerRequests(): Response<RequestResponse>
+
+    @GET("api/profile")
+    suspend fun getProfile(): Response<User>
+
+    @POST("api/logout")
+    suspend fun logout(): Response<Map<String, String>>
+
+    @POST("api/requests/{requestID}/accept")
+    suspend fun acceptRequest(@Path("requestID") requestID: Long): Response<ResponseBody>
+
+    @PUT("api/requests/{requestID}/reject")
+    suspend fun rejectRequest(@Path("requestID") requestID: Long): Response<ResponseBody>
+
+    @PUT("api/requests/{requestID}/status/{statusID}")
+    suspend fun updateRequestStatus(
+        @Path("requestID") requestID: Long,
+        @Path("statusID") statusID: Int
+    ): Response<ResponseBody>
+
+    @GET("api/customer/{customerID}/requests")
+    suspend fun getCustomerRequests(@Path("customerID") customerID: Long): Response<List<Request>>
+    
+    @GET("api/notifications")
+    suspend fun getNotifications(): Response<NotificationResponse>
+    
+    @PUT("api/notifications/{notificationId}/read")
+    suspend fun markNotificationAsRead(@Path("notificationId") notificationId: Long): Response<ResponseBody>
+    
+    @DELETE("api/notifications/{notificationId}")
+    suspend fun deleteNotification(@Path("notificationId") notificationId: Long): Response<ResponseBody>
+}

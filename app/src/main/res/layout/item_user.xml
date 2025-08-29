@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:elevation="4dp"
+    android:padding="12dp"
+
+    android:radius="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvRequestID"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Request ID: "
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvDateRequestMade"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Date Request Made: "
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvSackQty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sacks: " />
+
+        <TextView
+            android:id="@+id/tvServices"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Services: " />
+
+
+
+        <TextView
+            android:id="@+id/tvPaymentMethod"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Payment: " />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Status: " />
+
+
+        <Button
+            android:id="@+id/btnComplete"
+            android:layout_gravity="right"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Complete"
+            android:layout_marginTop="8dp"/>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

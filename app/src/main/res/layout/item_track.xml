@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_margin="8dp"
+    android:elevation="4dp"
+    android:padding="18dp"
+    android:radius="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvCustomerName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Customer: "
+            android:paddingTop="10dp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvSackQty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sacks: " />
+
+        <TextView
+            android:id="@+id/tvServices"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Services: " />
+
+        <TextView
+            android:id="@+id/tvSchedule"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Schedule: " />
+
+        <TextView
+            android:id="@+id/tvPickupLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pickup Location: "
+            android:visibility="visible" />
+
+        <TextView
+            android:id="@+id/tvDeliveryLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Delivery Location: "
+            android:visibility="visible" />
+
+        <!-- Current Status TextView -->
+        <TextView
+            android:id="@+id/tvCurrentStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Current Status: "
+            android:textStyle="bold"
+            android:textColor="#3F51B5"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Divider below current status -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#CCCCCC"
+            android:layout_marginBottom="8dp" />
+
+        <RadioGroup
+            android:id="@+id/rgStatusOptions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rbDpickup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Delivery Boy Pickup"
+                android:textSize="10sp" />
+
+            <RadioButton
+                android:id="@+id/rbCDropoff"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Waiting for Customer Drop Off"
+                android:textSize="10sp" />
+
+            <RadioButton
+                android:id="@+id/rbPending"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pending"
+                android:textSize="10sp" />
+
+            <RadioButton
+                android:id="@+id/rbProcessing"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Processing"
+                android:textSize="10sp" />
+
+            <RadioButton
+                android:id="@+id/rbOutForDelivery"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Out for Delivery"
+                android:textSize="10sp" />
+
+            <RadioButton
+                android:id="@+id/rbCPickup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Waiting for Customer Pickup"
+                android:textSize="10sp" />
+        </RadioGroup>
+
+        <Button
+            android:id="@+id/btnSubmit"
+            android:layout_gravity="right"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Submit"
+            android:layout_marginTop="8dp"/>
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

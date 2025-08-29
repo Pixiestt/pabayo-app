@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_margin="8dp"
+    android:elevation="4dp"
+    android:padding="18dp"
+    android:radius="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tvRequestID"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Request ID: "
+            android:textStyle="bold"
+            android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/tvDateRequested"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Date Requested: "
+            android:layout_marginTop="8dp"/>
+
+        <TextView
+            android:id="@+id/tvSackQty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sack Quantity: "
+            android:layout_marginTop="8dp"/>
+
+        <TextView
+            android:id="@+id/tvServices"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Services: "
+            android:layout_marginTop="8dp"/>
+
+        <TextView
+            android:id="@+id/tvPickupLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pickup Location: "
+            android:layout_marginTop="8dp"
+            android:visibility="visible"/>
+
+        <TextView
+            android:id="@+id/tvDeliveryLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Delivery Location: "
+            android:layout_marginTop="8dp"
+            android:visibility="visible"/>
+
+        <TextView
+            android:id="@+id/tvPaymentMethod"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Payment Method: "
+            android:layout_marginTop="8dp"/>
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Status: "
+            android:textStyle="bold"
+            android:layout_marginTop="8dp"/>
+
+        <Button
+            android:id="@+id/btnMarkComplete"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mark as Complete"
+            android:layout_marginTop="16dp"/>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView> 
