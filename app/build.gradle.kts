@@ -59,6 +59,10 @@ dependencies {
     implementation (libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
+    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("androidx.lifecycle:lifecycle-runtime-testing:2.8.7")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
