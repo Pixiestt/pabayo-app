@@ -38,6 +38,9 @@
         <activity
             android:name=".authentication.PassRecoveryActivity"
             android:exported="false" />
+        <activity
+            android:name=".customer.RequestWizardActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

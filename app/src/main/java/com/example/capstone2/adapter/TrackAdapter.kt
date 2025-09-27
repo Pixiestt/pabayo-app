@@ -1,5 +1,6 @@
 package com.example.capstone2.adapter
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -104,11 +105,24 @@ class TrackAdapter(
             holder.rbProcessing, holder.rbOutForDelivery, holder.rbCPickup
         )
 
-        // Hide and uncheck all radio buttons
+        // Reset: hide and uncheck all radio buttons and hide radio group/submit by default
         allRadioButtons.forEach {
             it.visibility = View.GONE
             it.isChecked = false
+            it.isEnabled = true
+            it.isClickable = true
+            it.isFocusable = true
+            it.setOnClickListener(null) // clear any previous click listeners
         }
+        // clear previous group listener before resetting
+        holder.rgStatusOptions.setOnCheckedChangeListener(null)
+        holder.rgStatusOptions.clearCheck()
+        holder.rgStatusOptions.visibility = View.GONE
+        holder.rgStatusOptions.isEnabled = false
+        holder.rgStatusOptions.isClickable = false
+        holder.btnSubmit.visibility = View.GONE
+        holder.btnSubmit.isEnabled = false
+        holder.btnSubmit.setOnClickListener(null) // clear previous submit listener
 
         // Define full step list based on serviceID
         val fullStatusIDs = when (req.serviceID) {
@@ -121,23 +135,79 @@ class TrackAdapter(
         
         // Find current index in flow
         val currentIndex = fullStatusIDs.indexOf(req.statusID.toInt())
-        
-        // Only show next steps
-        if (currentIndex >= 0 && currentIndex < fullStatusIDs.size - 1) {
-            val nextStatus = fullStatusIDs[currentIndex + 1]
+
+        // Determine next status to show (handle case when status isn't in flow, e.g., 10 = Accepted)
+        val nextStatus: Int? = when {
+            fullStatusIDs.isEmpty() -> null
+            currentIndex >= 0 && currentIndex < fullStatusIDs.size - 1 -> fullStatusIDs[currentIndex + 1]
+            currentIndex == -1 -> fullStatusIDs[0] // start flow when current status is 'Accepted' or outside flow
+            else -> null
+        }
+
+        if (nextStatus != null) {
+            // Show only the radio corresponding to the next status
             val nextStepRadioButton = statusToRadioMap[nextStatus]
-            nextStepRadioButton?.visibility = View.VISIBLE
-            
-            // Add submit button click listener
+            nextStepRadioButton?.let {
+                it.visibility = View.VISIBLE
+                it.isChecked = false // do NOT auto-check; allow user to tap
+                it.isEnabled = true
+                it.isClickable = true
+                it.isFocusable = true
+                holder.rgStatusOptions.visibility = View.VISIBLE
+                holder.rgStatusOptions.isEnabled = true
+                holder.rgStatusOptions.isClickable = true
+                holder.btnSubmit.visibility = View.VISIBLE
+                holder.btnSubmit.isEnabled = false
+
+                // Ensure the parent/item and RadioGroup allow children to receive touch/focus
+                // Make the parent not intercept touches so RadioButton receives the first tap
+                holder.itemView.isClickable = false
+                holder.itemView.isFocusable = false
+                holder.itemView.isFocusableInTouchMode = false
+                holder.rgStatusOptions.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+
+                // Add an explicit click listener to ensure immediate selection
+                it.setOnClickListener { rb ->
+                    (rb as? RadioButton)?.isChecked = true
+                    // ensure the radio group registers the change
+                    holder.rgStatusOptions.check((rb as RadioButton).id)
+                    holder.btnSubmit.isEnabled = true
+                    Log.d("TrackAdapter", "Radio clicked for request=${req.requestID}, radioId=${(rb as RadioButton).id}")
+                }
+            }
+
+            // Enable submit only when a selection is made
+            holder.rgStatusOptions.setOnCheckedChangeListener { group, checkedId ->
+                holder.btnSubmit.isEnabled = checkedId != -1
+                Log.d("TrackAdapter", "Checked changed request=${req.requestID}, checkedId=$checkedId")
+            }
+
+            // Map radio id -> status for submit
+            val radioIdToStatus = mapOf(
+                holder.rbDpickup.id to 2,
+                holder.rbCDropoff.id to 3,
+                holder.rbPending.id to 4,
+                holder.rbProcessing.id to 5,
+                holder.rbOutForDelivery.id to 6,
+                holder.rbCPickup.id to 7
+            )
+
+            // Add submit button click listener that reads the selected radio at the moment of click
             holder.btnSubmit.setOnClickListener {
-                if (nextStepRadioButton?.isChecked == true) {
-                    onButtonClick(req, nextStatus)
+                val checkedId = holder.rgStatusOptions.checkedRadioButtonId
+                val selectedStatus = radioIdToStatus[checkedId]
+                Log.d("TrackAdapter", "Submit clicked request=${req.requestID}, checkedId=$checkedId, selectedStatus=$selectedStatus")
+                if (selectedStatus != null) {
+                    onButtonClick(req, selectedStatus)
                 } else {
                     Toast.makeText(holder.itemView.context, "Please select a status option", Toast.LENGTH_SHORT).show()
                 }
             }
         } else {
+            // No next step available -> hide submit (already hidden by reset above)
             holder.btnSubmit.visibility = View.GONE
+            holder.btnSubmit.setOnClickListener(null)
+            holder.rgStatusOptions.setOnCheckedChangeListener(null)
         }
     }
 

@@ -34,7 +34,7 @@ class LoginActivity : AppCompatActivity() {
 
         userViewModel = ViewModelProvider(
             this,
-            UserViewModelFactory(applicationContext)  // 👈 fix: pass context
+            UserViewModelFactory(applicationContext)
         )[UserViewModel::class.java]
 
         val emailEditText = findViewById<EditText>(R.id.emailAddET)

@@ -11,7 +11,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:descendantFocusability="afterDescendants"> <!-- allow children to get focus first -->
 
         <TextView
             android:id="@+id/tvCustomerName"
@@ -73,51 +74,59 @@
 
         <RadioGroup
             android:id="@+id/rgStatusOptions"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:focusable="true"
+            android:focusableInTouchMode="true"> <!-- ensure group can handle focus in touch mode -->
 
             <RadioButton
                 android:id="@+id/rbDpickup"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Delivery Boy Pickup"
-                android:textSize="10sp" />
+                android:textSize="14sp"
+                android:textColor="@android:color/black" />
 
             <RadioButton
                 android:id="@+id/rbCDropoff"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Waiting for Customer Drop Off"
-                android:textSize="10sp" />
+                android:textSize="14sp"
+                android:textColor="@android:color/black" />
 
             <RadioButton
                 android:id="@+id/rbPending"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Pending"
-                android:textSize="10sp" />
+                android:textSize="14sp"
+                android:textColor="@android:color/black" />
 
             <RadioButton
                 android:id="@+id/rbProcessing"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Processing"
-                android:textSize="10sp" />
+                android:textSize="14sp"
+                android:textColor="@android:color/black" />
 
             <RadioButton
                 android:id="@+id/rbOutForDelivery"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Out for Delivery"
-                android:textSize="10sp" />
+                android:textSize="14sp"
+                android:textColor="@android:color/black" />
 
             <RadioButton
                 android:id="@+id/rbCPickup"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Waiting for Customer Pickup"
-                android:textSize="10sp" />
+                android:textSize="14sp"
+                android:textColor="@android:color/black" />
         </RadioGroup>
 
         <Button

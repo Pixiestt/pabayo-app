@@ -1,0 +1,47 @@
+<!-- Location Input -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Enter your location"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/etPickupLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:background="@drawable/edit_text_background"
+                    android:hint="123 Main St. Anytown"
+                    android:padding="16dp"
+                    android:textSize="16sp"
+                    android:visibility="gone" />
+
+                <!-- Add Pickup Date -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pickup Date"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/etPickupDate"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:background="@drawable/edit_text_background"
+                    android:hint="Select pickup date"
+                    android:padding="16dp"
+                    android:textSize="16sp"
+                    android:focusable="false"
+                    android:clickable="true" />
+
+            </LinearLayout>
