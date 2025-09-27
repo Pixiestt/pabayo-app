@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="300dp"
+    android:viewportWidth="400"
+    android:viewportHeight="300">
+    <!-- Sky gradient background -->
+    <path
+        android:fillColor="#87CEEB"
+        android:pathData="M0,0L400,0L400,100L0,100Z" />
+    <!-- Rice field -->
+    <path
+        android:fillColor="#90EE90"
+        android:pathData="M0,100L400,100L400,300L0,300Z" />
+    <!-- Rice stalks -->
+    <path
+        android:fillColor="#228B22"
+        android:pathData="M50,100L55,100L55,200L50,200Z" />
+    <path
+        android:fillColor="#228B22"
+        android:pathData="M100,100L105,100L105,200L100,200Z" />
+    <path
+        android:fillColor="#228B22"
+        android:pathData="M150,100L155,100L155,200L150,200Z" />
+    <path
+        android:fillColor="#228B22"
+        android:pathData="M200,100L205,100L205,200L200,200Z" />
+    <path
+        android:fillColor="#228B22"
+        android:pathData="M250,100L255,100L255,200L250,200Z" />
+    <path
+        android:fillColor="#228B22"
+        android:pathData="M300,100L305,100L305,200L300,200Z" />
+    <path
+        android:fillColor="#228B22"
+        android:pathData="M350,100L355,100L355,200L350,200Z" />
+</vector>

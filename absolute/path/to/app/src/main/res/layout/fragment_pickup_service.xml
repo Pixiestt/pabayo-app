@@ -1,0 +1,27 @@
+<RadioGroup
+    android:id="@+id/radioGroupPickup"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- Pick up from location Option -->
+    <RadioButton
+        android:id="@+id/rbPickupFromLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:padding="20dp"
+        android:text="Pick up the palay from my location 🚚"
+        android:textSize="16sp"
+        android:background="@drawable/radio_button_background"/>
+
+    <!-- Drop off at facility Option -->
+    <RadioButton
+        android:id="@+id/rbDropOffAtFacility"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp"
+        android:text="I will drop off the palay at your facility 🏭"
+        android:textSize="16sp"
+        android:background="@drawable/radio_button_background"/>
+</RadioGroup>
