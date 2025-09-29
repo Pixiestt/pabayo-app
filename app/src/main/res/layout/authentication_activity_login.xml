@@ -38,23 +38,44 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.261" />
 
-    <EditText
-        android:id="@+id/passET"
+    <!-- Password field + toggle placed inside a FrameLayout so the eye sits within the EditText -->
+    <FrameLayout
+        android:id="@+id/pass_container"
         android:layout_width="match_parent"
         android:layout_height="50sp"
         android:layout_marginStart="30dp"
         android:layout_marginEnd="30dp"
-        android:background="@drawable/custom_edittext"
-        android:drawableStart="@drawable/padlock"
-        android:drawablePadding="8sp"
-        android:hint="Password"
-        android:padding="8sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.356" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintVertical_bias="0.356">
+
+        <EditText
+            android:id="@+id/passET"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/custom_edittext"
+            android:drawableStart="@drawable/padlock"
+            android:drawablePadding="8sp"
+            android:hint="Password"
+            android:paddingStart="8sp"
+            android:paddingEnd="48dp"
+            android:inputType="textPassword" />
+
+        <ImageButton
+            android:id="@+id/togglePassBtn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Toggle password visibility"
+            android:padding="6dp"
+            android:scaleType="centerInside"
+            android:src="@android:drawable/ic_menu_view" />
+
+    </FrameLayout>
 
     <Button
         android:id="@+id/loginBtn"

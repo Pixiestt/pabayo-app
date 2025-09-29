@@ -19,13 +19,65 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- Date filter row -->
+    <LinearLayout
+        android:id="@+id/dateFilterRow"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        app:layout_constraintTop_toBottomOf="@id/historyFragment"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <EditText
+            android:id="@+id/etStartDateHistoryCustomer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Start date"
+            android:focusable="false"
+            android:clickable="true"
+            android:inputType="none"
+            android:drawableEnd="@android:drawable/ic_menu_my_calendar"
+            android:padding="8dp" />
+
+        <EditText
+            android:id="@+id/etEndDateHistoryCustomer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:hint="End date"
+            android:focusable="false"
+            android:clickable="true"
+            android:inputType="none"
+            android:drawableEnd="@android:drawable/ic_menu_my_calendar"
+            android:padding="8dp" />
+
+        <Button
+            android:id="@+id/btnFilterHistoryCustomer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Filter" />
+
+        <Button
+            android:id="@+id/btnClearFilterCustomer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Clear" />
+
+    </LinearLayout>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewHistory"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
         android:paddingHorizontal="8dp"
-        app:layout_constraintTop_toBottomOf="@id/historyFragment"
+        app:layout_constraintTop_toBottomOf="@id/dateFilterRow"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -37,7 +89,7 @@
         android:text="No completed requests found"
         android:textSize="16sp"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/historyFragment"
+        app:layout_constraintTop_toBottomOf="@id/dateFilterRow"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

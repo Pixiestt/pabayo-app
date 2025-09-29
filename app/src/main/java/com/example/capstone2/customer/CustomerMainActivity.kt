@@ -1,9 +1,11 @@
 package com.example.capstone2.customer
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -78,6 +80,10 @@ class CustomerMainActivity : AppCompatActivity() {
                 R.id.request -> setCurrentFragment(fragmentrequest)
                 R.id.track -> setCurrentFragment(fragmenttrack)
                 R.id.history -> setCurrentFragment(fragmenthistory)
+                R.id.logout -> {
+                    // show confirmation dialog instead of immediate logout
+                    showLogoutConfirmation()
+                }
             }
             drawerLayout.closeDrawer(GravityCompat.START)
             true
@@ -117,4 +123,27 @@ class CustomerMainActivity : AppCompatActivity() {
             replace(R.id.flFragment, fragment)
             commit()
         }
+
+    // Show a confirmation dialog before logging out
+    private fun showLogoutConfirmation() {
+        AlertDialog.Builder(this)
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to logout?")
+            .setPositiveButton("Logout") { _, _ ->
+                performLogout()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    // Clear stored auth and navigate to LoginActivity
+    private fun performLogout() {
+        val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
+        sharedPref.edit().remove("auth_token").remove("userID").apply()
+
+        val intent = Intent(this, com.example.capstone2.authentication.LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
+    }
 }

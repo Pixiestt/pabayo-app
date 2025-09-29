@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.capstone2.R
@@ -26,12 +27,31 @@ class RequestWizardActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_request_wizard)
-        
+
+        // Block users whose account status is pending
+        val sharedPreferences = getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
+        val status = sharedPreferences.getString("user_status", "approved")?.trim()?.lowercase()
+        if (status == "pending") {
+            showPendingDialog()
+            return
+        }
+
         requestWizardData = RequestWizardData()
         setupViewModel()
         showStep(1)
     }
     
+    private fun showPendingDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Account not approved")
+            .setMessage("Your account is still pending approval. You cannot avail services until your account is approved.")
+            .setPositiveButton("OK") { _, _ ->
+                finish()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
     private fun setupViewModel() {
         val sharedPreferences = getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
         val token = sharedPreferences.getString("auth_token", null)

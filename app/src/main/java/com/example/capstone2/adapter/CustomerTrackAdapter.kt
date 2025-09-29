@@ -77,7 +77,7 @@ class CustomerTrackAdapter(
             1 -> "Subject for approval"
             2 -> "Delivery boy pickup"
             3 -> "Waiting for customer drop off"
-            4 -> "Pending"
+            4 -> "In Queue"
             5 -> "Processing"
             6 -> "Rider out for delivery"
             7 -> "Waiting for customer pickup"
