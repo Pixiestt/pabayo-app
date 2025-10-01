@@ -24,7 +24,6 @@ class OwnerHistoryAdapter(
         val requestId: TextView = itemView.findViewById(R.id.tvRequestId)
         val customerName: TextView = itemView.findViewById(R.id.tvCustomerName)
         val sackQuantity: TextView = itemView.findViewById(R.id.tvSackQuantity)
-        val paymentMethod: TextView = itemView.findViewById(R.id.tvPaymentMethod)
         val status: TextView = itemView.findViewById(R.id.tvStatus)
     }
 
@@ -45,7 +44,6 @@ class OwnerHistoryAdapter(
         holder.requestId.text = "Request ID: ${request.requestID}"
         holder.customerName.text = "Customer: ${request.customerName}"
         holder.sackQuantity.text = "Sack Quantity: ${request.sackQuantity}"
-        holder.paymentMethod.text = "Payment Method: ${request.paymentMethod}"
         holder.status.text = "Status: Completed"
         
         // Toggle details visibility on button click
@@ -64,4 +62,4 @@ class OwnerHistoryAdapter(
         completedRequests = newRequests
         notifyDataSetChanged()
     }
-} 
+}

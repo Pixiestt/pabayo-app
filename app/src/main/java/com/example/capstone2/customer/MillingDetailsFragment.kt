@@ -10,7 +10,6 @@ import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.example.capstone2.R
-import com.example.capstone2.data.models.RequestWizardData
 import com.example.capstone2.data.models.MillingType
 
 class MillingDetailsFragment : Fragment() {
@@ -45,9 +44,25 @@ class MillingDetailsFragment : Fragment() {
         val activity = requireActivity() as RequestWizardActivity
         tvStepProgress.text = "1/5"
         
-        // Initially disable the Next button
-        btnNext.isEnabled = false
-        
+        // Prefill from wizard data if editing
+        val wizard = activity.getWizardData()
+        sackCount = wizard.sackCount
+        tvSackCount.text = sackCount.toString()
+
+        wizard.millingType?.let { mt ->
+            when (mt) {
+                MillingType.MILLING_FOR_FEE -> radioGroup.check(R.id.rbMillingForFee)
+                MillingType.MILLING_FOR_RICE_CONVERSION -> {
+                    // No specific radio in this layout for rice conversion; keep default selection or clear
+                    // If you add a radio/button for this option in the layout, update this block.
+                }
+            }
+            btnNext.isEnabled = true
+        }
+
+        // Initially disable the Next button if not prefilling
+        if (!btnNext.isEnabled) btnNext.isEnabled = false
+
         // Set up radio button listeners
         radioGroup.setOnCheckedChangeListener { _, checkedId ->
             // Enable the Next button when an option is selected
@@ -58,16 +73,18 @@ class MillingDetailsFragment : Fragment() {
                 R.id.rbMillingForFee -> {
                     activity.getWizardData().millingType = MillingType.MILLING_FOR_FEE
                 }
+                else -> {
+                    // No other radios in this layout; leave wizard value as-is or handle future options.
+                }
             }
         }
         
-        // Set up CardView click listener
+        // Set up CardView click listener for the available option
         val cardMillingForFee = view.findViewById<androidx.cardview.widget.CardView>(R.id.cardMillingForFee)
-        
         cardMillingForFee?.setOnClickListener {
             radioGroup.check(R.id.rbMillingForFee)
         }
-        
+
         btnPlus.setOnClickListener {
             sackCount++
             tvSackCount.text = sackCount.toString()

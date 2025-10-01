@@ -28,7 +28,6 @@
     <string name="service_format">Service: %1$s</string>
     <string name="pickup_location_format">Pickup Location: %1$s</string>
     <string name="delivery_location_format">Delivery Location: %1$s</string>
-    <string name="payment_method_format">Payment Method: %1$s</string>
     <string name="status_format">Status: %1$s</string>
 
     <!-- Dialog labels -->
@@ -37,7 +36,6 @@
     <string name="label_sacks">Sacks:</string>
     <string name="label_services">Services:</string>
     <string name="label_schedule">Schedule:</string>
-    <string name="label_payment_method">Payment Method:</string>
     <string name="label_pickup_location">Pickup Location:</string>
     <string name="label_delivery_location">Delivery Location:</string>
     <string name="label_comment">Comment:</string>

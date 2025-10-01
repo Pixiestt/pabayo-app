@@ -52,9 +52,36 @@ class PickupServiceFragment : Fragment() {
         val activity = requireActivity() as RequestWizardActivity
         tvStepProgress.text = "2/5"
         
-        // Initially hide the location input and pickup date
-        etPickupLocation.visibility = View.GONE
-        etPickupDate.visibility = View.GONE
+        // Prefill from wizard data if present
+        val wizard = activity.getWizardData()
+        wizard.pickupService?.let { ps ->
+            when (ps) {
+                PickupService.PICKUP_FROM_LOCATION -> radioGroup.check(R.id.rbPickupFromLocation)
+                PickupService.DROP_OFF_AT_FACILITY -> radioGroup.check(R.id.rbDropOffAtFacility)
+            }
+        }
+
+        wizard.pickupLocation?.let { loc ->
+            etPickupLocation.setText(loc)
+            etPickupLocation.visibility = View.VISIBLE
+        }
+        wizard.pickupDate?.let { pd ->
+            etPickupDate.setText(pd)
+            etPickupDate.visibility = View.VISIBLE
+        }
+
+        // Initially hide the location input and pickup date when selection is drop off
+        if (radioGroup.checkedRadioButtonId == R.id.rbDropOffAtFacility) {
+            etPickupLocation.visibility = View.GONE
+            etPickupDate.visibility = View.GONE
+        } else if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromLocation) {
+            etPickupLocation.visibility = View.VISIBLE
+            etPickupDate.visibility = View.VISIBLE
+        } else {
+            etPickupLocation.visibility = View.GONE
+            etPickupDate.visibility = View.GONE
+        }
+
         setNextEnabled(false)
 
         // Set up radio button listeners
@@ -160,30 +187,6 @@ class PickupServiceFragment : Fragment() {
         btnNext.isClickable = enabled
         // visually indicate disabled state
         btnNext.alpha = if (enabled) 1.0f else 0.5f
-        if (enabled) {
-            // ensure button is on top and receives clicks in case some view overlaps it
-            btnNext.bringToFront()
-            btnNext.requestLayout()
-            btnNext.invalidate()
-            // make focusable and request focus to improve touch handling
-            btnNext.isFocusable = true
-            btnNext.isFocusableInTouchMode = true
-            btnNext.requestFocus()
-            // raise elevation/z to avoid being blocked by other views
-            try {
-                btnNext.elevation = 8f
-                btnNext.translationZ = 8f
-            } catch (e: Exception) {
-                // ignore on older platforms
-            }
-        } else {
-            try {
-                btnNext.elevation = 0f
-                btnNext.translationZ = 0f
-            } catch (e: Exception) {
-                // ignore
-            }
-        }
         Log.d(TAG, "Next button enabled: $enabled")
     }
 }

@@ -1,11 +1,18 @@
 package com.example.capstone2.customer
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -26,19 +33,55 @@ class CustomerFragmentTrack : Fragment(R.layout.customer_fragment_track) {
     private lateinit var tvNoRequests: TextView
     private var customerID: Long = -1L
 
+    // Activity result launcher for editing requests
+    private lateinit var editLauncher: ActivityResultLauncher<Intent>
+
+    // BroadcastReceiver to refresh list when a request is updated elsewhere
+    private val updateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            // Optionally, we could inspect the requestID from the intent
+            Log.d("CustomerFragmentTrack", "Received ACTION_REQUEST_UPDATED, refreshing list")
+            fetchCustomerRequests()
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         recyclerView = view.findViewById(R.id.recyclerViewCustomerTrack)
         tvNoRequests = view.findViewById(R.id.tvNoRequests)
-        
+
+        // Prepare activity result launcher before using it
+        editLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                Log.d("CustomerFragmentTrack", "Edit returned RESULT_OK, refreshing list")
+                fetchCustomerRequests()
+            } else {
+                Log.d("CustomerFragmentTrack", "Edit returned resultCode=${result.resultCode}")
+            }
+        }
+
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         
         // Initialize adapter with callback for mark complete button
-        customerTrackAdapter = CustomerTrackAdapter(emptyList()) { request ->
+        customerTrackAdapter = CustomerTrackAdapter(emptyList(), { request ->
             handleMarkComplete(request)
-        }
+        }, { request ->
+            // Launch the RequestWizardActivity for editing and wait for result
+            val intent = Intent(requireContext(), RequestWizardActivity::class.java)
+            intent.putExtra(RequestWizardActivity.EXTRA_EDIT_REQUEST, request)
+            editLauncher.launch(intent)
+        })
         recyclerView.adapter = customerTrackAdapter
+
+        // Register receiver to listen for updates (so list refreshes after edit)
+        val filter = IntentFilter("com.example.capstone2.ACTION_REQUEST_UPDATED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Use the new flags parameter to mark receiver as not exported
+            requireContext().registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            requireContext().registerReceiver(updateReceiver, filter)
+        }
 
         // Get token and customer ID from shared preferences
         val sharedPreferences = requireContext().getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
@@ -85,6 +128,8 @@ class CustomerFragmentTrack : Fragment(R.layout.customer_fragment_track) {
         customerRequestViewModel.updateStatusResult.observe(viewLifecycleOwner) { isSuccess ->
             if (isSuccess) {
                 Toast.makeText(requireContext(), "Request marked as complete", Toast.LENGTH_SHORT).show()
+                // Refresh list after successfully marking as complete
+                fetchCustomerRequests()
             } else {
                 Toast.makeText(requireContext(), "Failed to update request status", Toast.LENGTH_SHORT).show()
             }
@@ -94,6 +139,12 @@ class CustomerFragmentTrack : Fragment(R.layout.customer_fragment_track) {
         fetchCustomerRequests()
     }
     
+    override fun onResume() {
+        super.onResume()
+        // Ensure we refresh the list every time the fragment becomes visible
+        fetchCustomerRequests()
+    }
+
     private fun handleMarkComplete(request: Request) {
         customerRequestViewModel.markRequestAsComplete(request.requestID)
     }
@@ -101,6 +152,15 @@ class CustomerFragmentTrack : Fragment(R.layout.customer_fragment_track) {
     private fun fetchCustomerRequests() {
         if (customerID != -1L) {
             customerRequestViewModel.fetchCustomerRequests(customerID)
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        try {
+            requireContext().unregisterReceiver(updateReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver not registered or already unregistered, ignore
         }
     }
 }

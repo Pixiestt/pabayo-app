@@ -41,7 +41,16 @@ class ContactDetailsFragment : Fragment() {
         etComment = view.findViewById(R.id.etComment)
         btnSubmit = view.findViewById(R.id.btnSubmit)
         tvStepProgress = view.findViewById(R.id.tvStepProgress)
-        
+
+        val activity = requireActivity() as RequestWizardActivity
+        tvStepProgress.text = "5/5"
+
+        // Prefill from wizard data if present
+        val wizard = activity.getWizardData()
+        wizard.customerName?.let { etCustomerName.setText(it) }
+        wizard.contactNumber?.let { etContactNumber.setText(it) }
+        wizard.comment?.let { etComment.setText(it) }
+
         btnSubmit.setOnClickListener {
             if (validateForm()) {
                 val activity = requireActivity() as RequestWizardActivity

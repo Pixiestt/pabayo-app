@@ -42,10 +42,32 @@ class DeliveryServiceFragment : Fragment() {
         val activity = requireActivity() as RequestWizardActivity
         tvStepProgress.text = "3/5"
         
+        // Prefill from wizard data if available
+        val wizard = activity.getWizardData()
+        wizard.deliveryService?.let { ds ->
+            when (ds) {
+                DeliveryService.DELIVER_TO_LOCATION -> radioGroup.check(R.id.rbDeliverToLocation)
+                DeliveryService.PICKUP_FROM_FACILITY -> radioGroup.check(R.id.rbPickupFromFacility)
+            }
+        }
+
+        wizard.deliveryLocation?.let { loc ->
+            etDeliveryLocation.setText(loc)
+            etDeliveryLocation.visibility = View.VISIBLE
+        }
+
         // Initially hide the location input and disable Next button
-        etDeliveryLocation.visibility = View.GONE
-        btnNext.isEnabled = false
-        
+        if (radioGroup.checkedRadioButtonId == R.id.rbDeliverToLocation) {
+            etDeliveryLocation.visibility = View.VISIBLE
+            btnNext.isEnabled = etDeliveryLocation.text.toString().trim().isNotEmpty()
+        } else if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromFacility) {
+            etDeliveryLocation.visibility = View.GONE
+            btnNext.isEnabled = true
+        } else {
+            etDeliveryLocation.visibility = View.GONE
+            btnNext.isEnabled = false
+        }
+
         // Set up radio button listeners
         radioGroup.setOnCheckedChangeListener { _, checkedId ->
             when (checkedId) {
