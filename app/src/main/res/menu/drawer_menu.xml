@@ -3,28 +3,34 @@
 
     <item
         android:id="@+id/home"
-        android:title="Home"
+        android:title="@string/nav_home"
         android:icon="@drawable/ic_home" />
 
     <item
         android:id="@+id/request"
-        android:title="Request"
+        android:title="@string/nav_request"
         android:icon="@drawable/ic_request"/>
 
     <item
         android:id="@+id/track"
-        android:title="Track"
+        android:title="@string/nav_track"
         android:icon="@drawable/ic_track"/>
 
     <item
         android:id="@+id/history"
         android:icon="@drawable/ic_history"
-        android:title="History" />
+        android:title="@string/nav_history" />
+
+    <!-- Profile menu item -->
+    <item
+        android:id="@+id/profile"
+        android:icon="@drawable/ic_profile"
+        android:title="@string/nav_profile" />
 
     <!-- Logout menu item -->
     <item
         android:id="@+id/logout"
         android:icon="@drawable/ic_logout"
-        android:title="Logout" />
+        android:title="@string/nav_logout" />
 
 </menu>

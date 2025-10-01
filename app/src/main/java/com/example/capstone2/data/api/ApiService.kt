@@ -32,6 +32,14 @@ interface ApiService {
     @GET("api/profile")
     suspend fun getProfile(): Response<User>
 
+    // Update user profile (fields editable by user during sign-up)
+    @PUT("api/profile")
+    suspend fun updateProfile(@Body request: com.example.capstone2.data.models.UpdateProfileRequest): Response<User>
+
+    // Change password endpoint
+    @PUT("api/profile/password")
+    suspend fun changePassword(@Body request: com.example.capstone2.data.models.ChangePasswordRequest): Response<Map<String, String>>
+
     @POST("api/logout")
     suspend fun logout(): Response<Map<String, String>>
 

@@ -55,6 +55,7 @@ class CustomerMainActivity : AppCompatActivity() {
         val fragmentrequest = CustomerFragmentRequest()
         val fragmenttrack = CustomerFragmentTrack()
         val fragmenthistory = CustomerFragmentHistory()
+        val fragmentprofile = com.example.capstone2.customer.CustomerProfileFragment()
 
         // Register a fragment lifecycle callback to toggle bottom nav visibility
         supportFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
@@ -80,6 +81,7 @@ class CustomerMainActivity : AppCompatActivity() {
                 R.id.request -> setCurrentFragment(fragmentrequest)
                 R.id.track -> setCurrentFragment(fragmenttrack)
                 R.id.history -> setCurrentFragment(fragmenthistory)
+                R.id.profile -> setCurrentFragment(fragmentprofile)
                 R.id.logout -> {
                     // show confirmation dialog instead of immediate logout
                     showLogoutConfirmation()
@@ -96,6 +98,7 @@ class CustomerMainActivity : AppCompatActivity() {
                 R.id.request -> setCurrentFragment(fragmentrequest)
                 R.id.track -> setCurrentFragment(fragmenttrack)
                 R.id.history -> setCurrentFragment(fragmenthistory)
+                R.id.profile -> setCurrentFragment(fragmentprofile)
             }
             true
         }

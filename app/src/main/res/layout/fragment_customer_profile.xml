@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/profile_title"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Progress spinner, hidden by default -->
+        <ProgressBar
+            android:id="@+id/profileProgress"
+            style="?android:attr/progressBarStyleLarge"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            android:indeterminate="true"
+            android:layout_marginBottom="12dp" />
+
+        <!-- First Name -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_first_name" />
+
+        <EditText
+            android:id="@+id/firstNameET"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_first_name"
+            android:inputType="textPersonName"
+            android:autofillHints="givenName" />
+
+        <!-- Last Name -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_last_name"
+            android:layout_marginTop="8dp" />
+
+        <EditText
+            android:id="@+id/lastNameET"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_last_name"
+            android:inputType="textPersonName"
+            android:autofillHints="familyName"
+            android:layout_marginTop="4dp" />
+
+        <!-- Email (display only) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_email"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/emailTV"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:padding="8dp"
+            android:background="#EEEEEE"
+            android:layout_marginTop="4dp" />
+
+        <!-- Contact Number -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_contact"
+            android:layout_marginTop="8dp" />
+
+        <EditText
+            android:id="@+id/contactET"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_contact"
+            android:inputType="phone"
+            android:autofillHints="phone"
+            android:layout_marginTop="4dp" />
+
+        <!-- Home Address -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_address"
+            android:layout_marginTop="8dp" />
+
+        <EditText
+            android:id="@+id/addressET"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_address"
+            android:inputType="textPostalAddress"
+            android:autofillHints="postalAddress"
+            android:layout_marginTop="4dp" />
+
+        <Button
+            android:id="@+id/saveBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/action_save"
+            android:layout_marginTop="12dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#DDDDDD"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/change_password_title"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp" />
+
+        <EditText
+            android:id="@+id/oldPassET"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_old_password"
+            android:inputType="textPassword"
+            android:autofillHints="password"
+            android:layout_marginTop="8dp" />
+
+        <EditText
+            android:id="@+id/newPassET"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_new_password"
+            android:inputType="textPassword"
+            android:autofillHints="password"
+            android:layout_marginTop="8dp" />
+
+        <!-- Confirm New Password -->
+        <EditText
+            android:id="@+id/newPassConfirmET"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_new_password_confirm"
+            android:inputType="textPassword"
+            android:autofillHints="password"
+            android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/changePassBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/action_change_password"
+            android:layout_marginTop="12dp" />
+
+    </LinearLayout>
+</ScrollView>
