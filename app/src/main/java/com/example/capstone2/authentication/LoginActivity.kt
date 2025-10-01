@@ -2,9 +2,12 @@ package com.example.capstone2.authentication
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
+import android.text.method.PasswordTransformationMethod
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -43,6 +46,32 @@ class LoginActivity : AppCompatActivity() {
         val signupTextView = findViewById<TextView>(R.id.signupTv)
         val forgotPassTextView = findViewById<TextView>(R.id.forgotpassTv)
 
+        // Password toggle button
+        val togglePassBtn = findViewById<ImageButton>(R.id.togglePassBtn)
+        var isPasswordVisible = false
+        // Ensure password is masked initially
+        passwordEditText.transformationMethod = PasswordTransformationMethod.getInstance()
+        passwordEditText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        togglePassBtn.contentDescription = "Show password"
+
+        togglePassBtn.setOnClickListener {
+            isPasswordVisible = !isPasswordVisible
+            if (isPasswordVisible) {
+                // show password
+                passwordEditText.transformationMethod = null
+                togglePassBtn.setImageResource(android.R.drawable.ic_menu_view)
+                togglePassBtn.contentDescription = "Hide password"
+            } else {
+                // hide password
+                passwordEditText.transformationMethod = PasswordTransformationMethod.getInstance()
+                togglePassBtn.setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+                togglePassBtn.contentDescription = "Show password"
+            }
+            // keep focus and cursor at the end
+            passwordEditText.requestFocus()
+            passwordEditText.setSelection(passwordEditText.text?.length ?: 0)
+        }
+
         signupTextView.setOnClickListener {
             startActivity(Intent(this, SignUpActivity::class.java))
         }
@@ -67,6 +96,8 @@ class LoginActivity : AppCompatActivity() {
                         // Save token and userID
                         saveAuthToken(token)
                         saveUserID(user.userID)
+                        // Save user account status (if provided). Default to "approved" to avoid accidental blocking when API doesn't supply status.
+                        saveUserStatus(user.status)
 
                         Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show()
 
@@ -96,5 +127,13 @@ class LoginActivity : AppCompatActivity() {
     private fun saveUserID(userID: Long) {
         val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
         sharedPref.edit().putLong("userID", userID).apply()
+    }
+
+    // Persist the user's account status so other parts of the app can check it.
+    private fun saveUserStatus(status: String?) {
+        val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
+        // If API didn't send status, default to "approved" (assumption). Change this if your backend uses a different convention.
+        val valueToSave = status ?: "approved"
+        sharedPref.edit().putString("user_status", valueToSave).apply()
     }
 }

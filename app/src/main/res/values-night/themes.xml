@@ -1,7 +1,27 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.Capstone" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+    <!-- Base application theme for night mode. -->
+    <style name="Base.Theme.Capstone" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Keep the same primary brand color for accents in dark mode -->
+        <item name="colorPrimary">@color/primary_main</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+
+        <!-- Secondary / accent -->
+        <item name="colorSecondary">@color/secondary_main</item>
+        <item name="colorOnSecondary">@color/on_secondary</item>
+
+        <!-- Dark background and surface -->
+        <item name="android:colorBackground">@color/background_dark</item>
+        <item name="colorSurface">@color/background_dark</item>
+
+        <!-- Text colors for dark theme -->
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+
+        <!-- Status bar color for dark mode -->
+        <item name="android:statusBarColor">@color/primary_dark</item>
+
+        <!-- Activated controls should use primary accent -->
+        <item name="colorControlActivated">@color/primary_main</item>
     </style>
 </resources>

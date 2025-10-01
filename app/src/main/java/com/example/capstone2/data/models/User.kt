@@ -11,7 +11,10 @@ data class User(
     val homeAddress: String,
     val IDCard: String,
     val roleID: Long,
-    val password: String
+    val password: String,
 
-
+    // Optional account status (e.g. "approved" or "pending").
+    // This assumes the API returns a field named `status`; if your API uses a different name,
+    // change the SerializedName accordingly.
+    val status: String? = null
 )
