@@ -33,7 +33,14 @@ class FeedsConversionFragment : Fragment() {
         
         val activity = requireActivity() as RequestWizardActivity
         tvStepProgress.text = "4/5"
-        
+
+        // Prefill from wizard data if present
+        val wizard = activity.getWizardData()
+        wizard.feedsConversion?.let { isChecked ->
+            switchFeedsConversion.isChecked = isChecked
+            activity.getWizardData().feedsConversion = isChecked
+        }
+
         // Set up switch listener
         switchFeedsConversion.setOnCheckedChangeListener { _, isChecked ->
             activity.getWizardData().feedsConversion = isChecked

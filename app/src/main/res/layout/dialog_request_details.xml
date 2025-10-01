@@ -49,13 +49,6 @@
             android:layout_marginTop="8dp" />
 
         <TextView
-            android:id="@+id/tvDetailPaymentMethod"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_payment_method"
-            android:layout_marginTop="8dp" />
-
-        <TextView
             android:id="@+id/tvDetailPickupLocation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -103,6 +96,16 @@
             android:progress="0"
             android:indeterminate="false"
             android:layout_marginTop="8dp" />
+
+        <!-- Edit button (visible only when allowed) -->
+        <Button
+            android:id="@+id/btnEdit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Edit"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/btnClose"

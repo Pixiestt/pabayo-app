@@ -33,6 +33,12 @@ interface ApiService {
         @Path("statusID") statusID: Int
     ): Response<ResponseBody>
 
+    @PUT("api/requests/{requestID}")
+    suspend fun updateRequest(
+        @Path("requestID") requestID: Long,
+        @Body request: CreateRequest
+    ): Response<CreateRequest>
+
     @GET("api/notifications")
     suspend fun getNotifications(): Response<NotificationResponse>
-} 
+}

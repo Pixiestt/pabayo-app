@@ -1,0 +1,135 @@
+public function update(Request $request, $id)
+{
+    Log::info('➡️ Reached update() method for requestID: ' . $id);
+    Log::info('📝 Incoming payload for update:', $request->all());
+
+    try {
+        // Validate incoming data (similar to store)
+        $validated = $request->validate([
+            'ownerID'        => 'required|exists:users_tbl,userID',
+            'customerID'     => 'required|exists:users_tbl,userID',
+            'serviceID'      => 'required|exists:services_tbl,serviceID',
+            'statusID'       => 'required|exists:status_tbl,statusID',
+            'courierID'      => 'nullable|integer',
+            'pickupDate'     => 'nullable|string',
+            'deliveryDate'   => 'nullable|string',
+            'sackQuantity'   => 'nullable|integer',
+            'comment'        => 'nullable|string|max:300',
+            'modeID'         => 'nullable|exists:paymentmethods_tbl,modeID',
+            'pickupLocation' => 'nullable|string|max:255',
+            'deliveryLocation'=> 'nullable|string|max:255',
+        ]);
+
+        // Find existing request
+        $requestModel = RequestModel::find($id);
+        if (!$requestModel) {
+            Log::warning('Request not found: ' . $id);
+            return response()->json(['message' => 'Request not found'], 404);
+        }
+
+        // Only allow editing if status is subject-for-approval (1)
+        if ((int)$requestModel->statusID !== 1) {
+            Log::warning('Attempt to edit non-editable requestID=' . $id . ' status=' . $requestModel->statusID);
+            return response()->json(['message' => 'Request can no longer be edited'], 409);
+        }
+
+        // Ensure authenticated user is the request owner/customer
+        $user = $request->user();
+        if ($user && isset($user->userID) && (int)$user->userID !== (int)$requestModel->customerID) {
+            Log::warning('Forbidden update attempt by user ' . ($user->userID ?? 'unknown') . ' on request ' . $id);
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        // Parse dates if provided (normalize to Y-m-d)
+        if (!empty($validated['pickupDate'])) {
+            $validated['pickupDate'] = \Carbon\Carbon::parse($validated['pickupDate'])->format('Y-m-d');
+        }
+        if (!empty($validated['deliveryDate'])) {
+            try {
+                $validated['deliveryDate'] = \Carbon\Carbon::parse($validated['deliveryDate'])->format('Y-m-d');
+            } catch (\Exception $ex) {
+                $validated['deliveryDate'] = \Carbon\Carbon::createFromFormat('m/d/Y', $validated['deliveryDate'])->format('Y-m-d');
+            }
+        }
+
+        // Update allowed fields
+        $requestModel->ownerID = $validated['ownerID'] ?? $requestModel->ownerID;
+        $requestModel->serviceID = $validated['serviceID'] ?? $requestModel->serviceID;
+        $requestModel->courierID = $validated['courierID'] ?? ($requestModel->courierID ?? 1);
+        $requestModel->statusID = $validated['statusID'] ?? $requestModel->statusID;
+        $requestModel->pickupDate = array_key_exists('pickupDate', $validated) ? $validated['pickupDate'] : $requestModel->pickupDate;
+        $requestModel->deliveryDate = array_key_exists('deliveryDate', $validated) ? $validated['deliveryDate'] : $requestModel->deliveryDate;
+        $requestModel->sackQuantity = $validated['sackQuantity'] ?? $requestModel->sackQuantity;
+        $requestModel->comment = $validated['comment'] ?? $requestModel->comment;
+        $requestModel->pickupLocation = $validated['pickupLocation'] ?? $requestModel->pickupLocation;
+        $requestModel->deliveryLocation = $validated['deliveryLocation'] ?? $requestModel->deliveryLocation;
+        $requestModel->dateUpdated = now();
+
+        $requestModel->save();
+
+        // If modeID provided, update payment method for the existing payment record (optional)
+        if (!empty($validated['modeID'])) {
+            $payment = \App\Models\Payment::where('requestID', $requestModel->requestID)->first();
+            if ($payment) {
+                $payment->modeID = $validated['modeID'];
+                $payment->save();
+            }
+        }
+
+        // Reload with relationships
+        $requestModel = RequestModel::with(['customer', 'service', 'payment.method'])->find($requestModel->requestID);
+
+        $firstName = $requestModel->customer->firstName ?? '';
+        $lastName  = $requestModel->customer->lastName ?? '';
+        $fullName  = trim("$firstName $lastName");
+
+        $serviceName = $requestModel->service->serviceName ?? 'Unknown';
+        if ($requestModel->serviceID == 1) {
+            $serviceName = 'All Services';
+        }
+
+        $paymentName = $requestModel->payment->method->modeName ?? 'Unspecified';
+        if ($requestModel->payment && $requestModel->payment->modeID == 1) {
+            $paymentName = 'Cash on Delivery';
+        } elseif ($requestModel->payment && $requestModel->payment->modeID == 2) {
+            $paymentName = 'Gcash';
+        }
+
+        $formatted = [
+            'requestID'        => $requestModel->requestID ?? 0,
+            'ownerID'          => $requestModel->ownerID ?? 0,
+            'customerID'       => $requestModel->customerID ?? 0,
+            'customerName'     => $fullName ?: '',
+            'serviceID'        => $requestModel->serviceID ?? 0,
+            'serviceName'      => $serviceName ?: '',
+            'courierID'        => $requestModel->courierID ?? 0,
+            'statusID'         => $requestModel->statusID ?? 0,
+            'pickupDate'       => $requestModel->pickupDate ?? '',
+            'paymentMethod'    => $paymentName ?: '',
+            'deliveryDate'     => $requestModel->deliveryDate ?? '',
+            'sackQuantity'     => $requestModel->sackQuantity ?? 0,
+            'comment'          => $requestModel->comment ?? '',
+            'dateUpdated'      => $requestModel->dateUpdated ?? '',
+            'schedule'         => $requestModel->pickupDate ?? '',
+            'submittedAt'      => $requestModel->dateCreated ?? ($requestModel->created_at ? $requestModel->created_at->toDateString() : ''),
+            'pickupLocation'   => $requestModel->pickupLocation ?? '',
+            'deliveryLocation' => $requestModel->deliveryLocation ?? '',
+            // Optional fields - include if present on model
+            'feedsConversion'  => $requestModel->feedsConversion ?? false,
+            'millingType'      => $requestModel->millingType ?? null,
+        ];
+
+        return response()->json([
+            'message' => 'Request updated successfully',
+            'data' => $formatted
+        ], 200);
+
+    } catch (\Throwable $e) {
+        Log::error('Request update failed for id ' . $id . ': ' . $e->getMessage());
+        Log::error('Trace: ' . $e->getTraceAsString());
+        return response()->json([
+            'error' => 'Failed to update request',
+            'details' => $e->getMessage(),
+        ], 500);
+    }
+}

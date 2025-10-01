@@ -70,22 +70,12 @@ class CustomerRequestViewModel(private val repository: RequestRepository) : View
                 val response = repository.updateRequestStatus(requestID, 8) // Status 8 = Completed
                 _updateStatusResult.value = response.isSuccessful
                 
-                if (response.isSuccessful) {
-                    // Get customerID from preferences or some other reliable source in a real app
-                    // For now, let's refresh all customer requests
-                    // This is a hack - in reality you should track the current user's ID
-                    val customerRequests = _customerRequests.value
-                    if (!customerRequests.isNullOrEmpty()) {
-                        val firstRequest = customerRequests.firstOrNull()
-                        firstRequest?.let {
-                            fetchCustomerRequests(it.customerID.toLong())
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("CustomerViewModel", "Error marking request as complete", e)
-                _updateStatusResult.value = false
-            }
-        }
-    }
-} 
+                // Do not auto-fetch here; let the UI (fragment) decide when to refresh to avoid
+                // incorrect assumptions about current user ID or visibility state.
+             } catch (e: Exception) {
+                 Log.e("CustomerViewModel", "Error marking request as complete", e)
+                 _updateStatusResult.value = false
+             }
+         }
+     }
+}

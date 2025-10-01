@@ -1,17 +1,18 @@
 package com.example.capstone2.customer
 
 import android.content.Context
+import android.app.Activity
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.capstone2.R
 import com.example.capstone2.data.models.RequestWizardData
 import com.example.capstone2.data.models.CreateRequest
 import com.example.capstone2.data.models.PickupService
 import com.example.capstone2.data.models.DeliveryService
+import com.example.capstone2.data.models.Request
 import com.example.capstone2.network.ApiClient
 import com.example.capstone2.repository.RequestRepository
 import com.example.capstone2.viewmodel.RequestViewModel
@@ -23,7 +24,12 @@ class RequestWizardActivity : AppCompatActivity() {
     private lateinit var requestViewModel: RequestViewModel
     private var currentStep = 1
     private val totalSteps = 5
-    
+    private var editingRequestId: Long? = null
+
+    companion object {
+        const val EXTRA_EDIT_REQUEST = "edit_request"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_request_wizard)
@@ -38,6 +44,14 @@ class RequestWizardActivity : AppCompatActivity() {
 
         requestWizardData = RequestWizardData()
         setupViewModel()
+
+        // Check for edit request passed via intent
+        val maybeEdit = intent.getParcelableExtra<Request>(EXTRA_EDIT_REQUEST)
+        if (maybeEdit != null) {
+            editingRequestId = maybeEdit.requestID
+            prefillFromRequest(maybeEdit)
+        }
+
         showStep(1)
     }
     
@@ -70,9 +84,29 @@ class RequestWizardActivity : AppCompatActivity() {
         requestViewModel.submitResult.observe(this) { response ->
             if (response != null) {
                 Toast.makeText(this, "Request submitted successfully", Toast.LENGTH_SHORT).show()
+                // inform caller that a request was created (no id available here)
+                setResult(Activity.RESULT_OK)
                 finish()
             } else {
                 Toast.makeText(this, "Request submission failed", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        requestViewModel.updateResult.observe(this) { response ->
+            if (response != null) {
+                Toast.makeText(this, "Request updated successfully", Toast.LENGTH_SHORT).show()
+                // notify other parts of the app that a request was updated so lists can refresh
+                val intent = android.content.Intent("com.example.capstone2.ACTION_REQUEST_UPDATED")
+                // include request id if available
+                intent.putExtra("requestID", editingRequestId)
+                sendBroadcast(intent)
+                // also set result so the caller (fragment) knows an update happened
+                val resultIntent = android.content.Intent()
+                resultIntent.putExtra("requestID", editingRequestId)
+                setResult(Activity.RESULT_OK, resultIntent)
+                finish()
+            } else {
+                Toast.makeText(this, "Failed to update request", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -134,8 +168,13 @@ class RequestWizardActivity : AppCompatActivity() {
             pickupLocation = requestWizardData.pickupLocation,
             deliveryLocation = requestWizardData.deliveryLocation
         )
-        
-        requestViewModel.submitRequest(request)
+
+        // If editing, call update; otherwise create
+        if (editingRequestId != null) {
+            requestViewModel.updateRequest(editingRequestId!!, request)
+        } else {
+            requestViewModel.submitRequest(request)
+        }
     }
     
     private fun calculateServiceID(): Long {
@@ -157,5 +196,54 @@ class RequestWizardActivity : AppCompatActivity() {
     
     fun getWizardData(): RequestWizardData = requestWizardData
     fun getCurrentStep(): Int = currentStep
-    fun getTotalSteps(): Int = totalSteps
+
+    private fun prefillFromRequest(req: Request) {
+        // Map fields from Request to RequestWizardData so fragments pick them up
+        requestWizardData.sackCount = req.sackQuantity
+        requestWizardData.comment = req.comment
+        requestWizardData.pickupDate = if (!req.pickupDate.isNullOrEmpty()) req.pickupDate else null
+        requestWizardData.pickupLocation = req.pickupLocation
+        requestWizardData.deliveryLocation = req.deliveryLocation
+
+        when (req.serviceID) {
+            1L -> {
+                requestWizardData.pickupService = PickupService.PICKUP_FROM_LOCATION
+                requestWizardData.deliveryService = DeliveryService.DELIVER_TO_LOCATION
+                requestWizardData.feedsConversion = true
+            }
+            2L -> {
+                requestWizardData.pickupService = PickupService.PICKUP_FROM_LOCATION
+                requestWizardData.deliveryService = null
+                requestWizardData.feedsConversion = false
+            }
+            3L -> {
+                requestWizardData.pickupService = null
+                requestWizardData.deliveryService = DeliveryService.DELIVER_TO_LOCATION
+                requestWizardData.feedsConversion = false
+            }
+            4L -> {
+                requestWizardData.pickupService = null
+                requestWizardData.deliveryService = null
+                requestWizardData.feedsConversion = true
+            }
+            5L -> {
+                requestWizardData.pickupService = PickupService.PICKUP_FROM_LOCATION
+                requestWizardData.deliveryService = DeliveryService.DELIVER_TO_LOCATION
+                requestWizardData.feedsConversion = false
+            }
+            6L -> {
+                requestWizardData.pickupService = PickupService.PICKUP_FROM_LOCATION
+                requestWizardData.deliveryService = null
+                requestWizardData.feedsConversion = true
+            }
+            7L -> {
+                requestWizardData.pickupService = null
+                requestWizardData.deliveryService = DeliveryService.DELIVER_TO_LOCATION
+                requestWizardData.feedsConversion = true
+            }
+            else -> {
+                // leave defaults
+            }
+        }
+    }
 }

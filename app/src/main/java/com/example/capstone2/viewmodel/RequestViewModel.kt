@@ -18,6 +18,9 @@ class RequestViewModel(
     private val _submitResult = MutableLiveData<CreateRequest?>()
     val submitResult: LiveData<CreateRequest?> = _submitResult
 
+    private val _updateResult = MutableLiveData<CreateRequest?>()
+    val updateResult: LiveData<CreateRequest?> = _updateResult
+
     fun submitRequest(request: CreateRequest) {
         viewModelScope.launch {
             try {
@@ -37,6 +40,24 @@ class RequestViewModel(
                 }
             } catch (e: Exception) {
                 _submitResult.postValue(null)
+            }
+        }
+    }
+
+    fun updateRequest(requestId: Long, request: CreateRequest) {
+        viewModelScope.launch {
+            try {
+                val response = requestRepository.updateRequest(requestId, request)
+                if (response.isSuccessful) {
+                    // Some backends return an empty body on successful update.
+                    // To ensure callers can detect success reliably, post a non-null value.
+                    val updated = response.body() ?: request
+                    _updateResult.postValue(updated)
+                } else {
+                    _updateResult.postValue(null)
+                }
+            } catch (e: Exception) {
+                _updateResult.postValue(null)
             }
         }
     }

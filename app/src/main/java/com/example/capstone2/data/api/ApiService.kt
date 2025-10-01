@@ -49,13 +49,24 @@ interface ApiService {
 
     @GET("api/customer/{customerID}/requests")
     suspend fun getCustomerRequests(@Path("customerID") customerID: Long): Response<List<Request>>
-    
+
+    // Raw endpoint to fetch body as ResponseBody so caller can attempt lenient parsing
+    @GET("api/customer/{customerID}/requests")
+    suspend fun getCustomerRequestsRaw(@Path("customerID") customerID: Long): Response<okhttp3.ResponseBody>
+
     @GET("api/notifications")
     suspend fun getNotifications(): Response<NotificationResponse>
-    
+
     @PUT("api/notifications/{notificationId}/read")
     suspend fun markNotificationAsRead(@Path("notificationId") notificationId: Long): Response<ResponseBody>
-    
+
     @DELETE("api/notifications/{notificationId}")
     suspend fun deleteNotification(@Path("notificationId") notificationId: Long): Response<ResponseBody>
+
+    // Update a request (used for editing existing requests)
+    @PUT("api/requests/{requestID}")
+    suspend fun updateRequest(
+        @Path("requestID") requestID: Long,
+        @Body request: CreateRequest
+    ): Response<CreateRequest>
 }

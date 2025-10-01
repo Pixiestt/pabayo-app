@@ -65,7 +65,6 @@ class RequestAdapter(
         val tvDetailSackQty: TextView = dialog.findViewById(R.id.tvDetailSackQty)
         val tvDetailServices: TextView = dialog.findViewById(R.id.tvDetailServices)
         val tvDetailSchedule: TextView = dialog.findViewById(R.id.tvDetailSchedule)
-        val tvDetailPaymentMethod: TextView = dialog.findViewById(R.id.tvDetailPaymentMethod)
         val tvDetailPickupLocation: TextView = dialog.findViewById(R.id.tvDetailPickupLocation)
         val tvDetailDeliveryLocation: TextView = dialog.findViewById(R.id.tvDetailDeliveryLocation)
         val tvDetailComment: TextView = dialog.findViewById(R.id.tvDetailComment)
@@ -77,8 +76,7 @@ class RequestAdapter(
         tvDetailSackQty.text = "Sacks: ${request.sackQuantity}"
         tvDetailServices.text = "Services: ${request.serviceName}"
         tvDetailSchedule.text = "Schedule: ${request.schedule ?: "Not set"}"
-        tvDetailPaymentMethod.text = "Payment Method: ${request.paymentMethod}"
-        
+
         // Show pickup location if available or if service requires it
         if (!request.pickupLocation.isNullOrEmpty()) {
             tvDetailPickupLocation.text = "Pickup Location: ${request.pickupLocation}"

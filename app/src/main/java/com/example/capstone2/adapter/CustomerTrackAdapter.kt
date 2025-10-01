@@ -13,7 +13,8 @@ import com.example.capstone2.data.models.Request
 
 class CustomerTrackAdapter(
     private var requests: List<Request>,
-    private val onMarkCompleteClick: (Request) -> Unit // Callback for mark complete button
+    private val onMarkCompleteClick: (Request) -> Unit, // Callback for mark complete button
+    private val onEditRequest: (Request) -> Unit // Callback when user wants to edit a request
 ) : RecyclerView.Adapter<CustomerTrackAdapter.CustomerTrackViewHolder>() {
 
     inner class CustomerTrackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -91,7 +92,6 @@ class CustomerTrackAdapter(
         val tvDetailSackQty: TextView = dialog.findViewById(R.id.tvDetailSackQty)
         val tvDetailServices: TextView = dialog.findViewById(R.id.tvDetailServices)
         val tvDetailSchedule: TextView = dialog.findViewById(R.id.tvDetailSchedule)
-        val tvDetailPaymentMethod: TextView = dialog.findViewById(R.id.tvDetailPaymentMethod)
         val tvDetailPickupLocation: TextView = dialog.findViewById(R.id.tvDetailPickupLocation)
         val tvDetailDeliveryLocation: TextView = dialog.findViewById(R.id.tvDetailDeliveryLocation)
         val tvDetailComment: TextView = dialog.findViewById(R.id.tvDetailComment)
@@ -99,13 +99,13 @@ class CustomerTrackAdapter(
         val tvDetailProgressLabel: TextView = dialog.findViewById(R.id.tvDetailProgressLabel)
         val progressBar: ProgressBar = dialog.findViewById(R.id.progressBarRequest)
         val btnClose: Button = dialog.findViewById(R.id.btnClose)
+        val btnEdit: Button = dialog.findViewById(R.id.btnEdit)
 
         // Use formatted string resources to populate the dialog
         tvDetailCustomerName.text = context.getString(R.string.customer_format, request.customerName)
         tvDetailSackQty.text = context.getString(R.string.sacks_format, request.sackQuantity)
         tvDetailServices.text = context.getString(R.string.services_format, request.serviceName)
         tvDetailSchedule.text = context.getString(R.string.schedule_format, request.schedule ?: "Not set")
-        tvDetailPaymentMethod.text = context.getString(R.string.payment_method_format, request.paymentMethod)
 
         // Show pickup location if available or if service requires it
         if (!request.pickupLocation.isNullOrEmpty()) {
@@ -158,6 +158,24 @@ class CustomerTrackAdapter(
 
         progressBar.progress = progress
         tvDetailProgressLabel.text = context.getString(R.string.progress_format, progress)
+
+        // Show Edit button only when request status is subject-for-approval (1) and logged-in user is customer
+        try {
+            val sp = context.getSharedPreferences("MyAppPrefs", android.content.Context.MODE_PRIVATE)
+            val loggedUserId = sp.getLong("userID", -1L)
+            if (request.statusID == 1 && loggedUserId == request.customerID) {
+                btnEdit.visibility = View.VISIBLE
+                btnEdit.setOnClickListener {
+                    // Invoke the fragment's edit callback so it can start the wizard for result
+                    onEditRequest(request)
+                    dialog.dismiss()
+                }
+            } else {
+                btnEdit.visibility = View.GONE
+            }
+        } catch (e: Exception) {
+            btnEdit.visibility = View.GONE
+        }
 
         btnClose.setOnClickListener {
             dialog.dismiss()
