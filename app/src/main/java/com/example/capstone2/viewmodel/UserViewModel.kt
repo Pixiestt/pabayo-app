@@ -7,6 +7,8 @@ import com.example.capstone2.data.models.LoginResponse
 import com.example.capstone2.data.models.RegisterRequest
 import com.example.capstone2.data.models.RegisterResponse
 import com.example.capstone2.data.models.User
+import com.example.capstone2.data.models.UpdateProfileRequest
+import com.example.capstone2.data.models.ChangePasswordRequest
 import com.example.capstone2.repository.UserRepository
 import retrofit2.Response
 
@@ -40,6 +42,26 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
             emit(response.body())  // Emit profile response
         } else {
             emit(null)  // Emit null if failed
+        }
+    }
+
+    // Update the logged-in user's profile
+    fun updateProfile(request: UpdateProfileRequest) = liveData {
+        val response: Response<User> = userRepository.updateProfile(request)
+        if (response.isSuccessful) {
+            emit(response.body())
+        } else {
+            emit(null)
+        }
+    }
+
+    // Change the logged-in user's password
+    fun changePassword(request: ChangePasswordRequest) = liveData {
+        val response: Response<Map<String, String>> = userRepository.changePassword(request)
+        if (response.isSuccessful) {
+            emit(response.body())
+        } else {
+            emit(null)
         }
     }
 

@@ -53,4 +53,45 @@
     <!-- Progress -->
     <string name="progress_format">Progress: %1$d%%</string>
 
+    <!-- Customer profile strings -->
+    <string name="nav_home">Home</string>
+    <string name="nav_request">Request</string>
+    <string name="nav_track">Track</string>
+    <string name="nav_history">History</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_logout">Logout</string>
+
+    <string name="profile_title">Profile</string>
+    <string name="hint_first_name">First name</string>
+    <string name="hint_last_name">Last name</string>
+    <string name="hint_email">Email address</string>
+    <string name="hint_contact">Contact number</string>
+    <string name="hint_address">Home address</string>
+    <string name="action_save">Save</string>
+    <string name="change_password_title">Change password</string>
+    <string name="hint_old_password">Old password</string>
+    <string name="hint_new_password">New password</string>
+    <string name="action_change_password">Change password</string>
+
+    <!-- Profile labels (extracted) -->
+    <string name="label_first_name">First name:</string>
+    <string name="label_last_name">Last name:</string>
+    <string name="label_email">Email:</string>
+    <string name="label_contact">Contact number:</string>
+    <string name="label_address">Home address:</string>
+
+    <!-- Validation messages -->
+    <string name="error_first_name_required">Please enter your first name</string>
+    <string name="error_last_name_required">Please enter your last name</string>
+    <string name="error_contact_required">Please enter your 11-digit contact number</string>
+    <string name="error_contact_invalid">Contact must be 11 digits</string>
+    <string name="error_address_required">Please enter your home address</string>
+    <string name="error_new_password_short">New password must be at least 8 characters</string>
+    <string name="saving_profile">Saving...</string>
+    <string name="saving_password">Updating password...</string>
+
+    <!-- New password confirmation -->
+    <string name="hint_new_password_confirm">Confirm new password</string>
+    <string name="error_password_mismatch">Passwords do not match</string>
+    <string name="error_old_password_required">Please enter your current password</string>
 </resources>

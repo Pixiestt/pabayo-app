@@ -46,7 +46,7 @@ class CustomerTrackAdapter(
             4 -> "In Queue"
             5 -> "Processing"
             6 -> "Rider out for delivery"
-            7 -> "Waiting for customer pickup"
+            7 -> "Waiting for customer to claim"
             8 -> "Completed"
             9 -> "Rejected"
             10 -> "Request Accepted"

@@ -99,8 +99,6 @@ class LoginActivity : AppCompatActivity() {
                         // Save user account status (if provided). Default to "approved" to avoid accidental blocking when API doesn't supply status.
                         saveUserStatus(user.status)
 
-                        Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show()
-
                         when (user.roleID.toLong()) {
                             2L -> startActivity(Intent(this, OwnerMainActivity::class.java))
                             3L -> startActivity(Intent(this, CustomerMainActivity::class.java))
