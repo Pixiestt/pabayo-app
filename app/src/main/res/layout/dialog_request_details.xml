@@ -13,7 +13,7 @@
             android:id="@+id/tvDetailTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Request Details"
+            android:text="@string/request_details_title"
             android:textSize="20sp"
             android:textStyle="bold"
             android:gravity="center"
@@ -23,7 +23,7 @@
             android:id="@+id/tvDetailCustomerName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Customer: "
+            android:text="@string/label_customer"
             android:textStyle="bold"
             android:layout_marginTop="8dp" />
 
@@ -31,64 +31,85 @@
             android:id="@+id/tvDetailSackQty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Sacks: "
+            android:text="@string/label_sacks"
             android:layout_marginTop="8dp" />
 
         <TextView
             android:id="@+id/tvDetailServices"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Services: "
+            android:text="@string/label_services"
             android:layout_marginTop="8dp" />
 
         <TextView
             android:id="@+id/tvDetailSchedule"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Schedule: "
+            android:text="@string/label_schedule"
             android:layout_marginTop="8dp" />
 
         <TextView
             android:id="@+id/tvDetailPaymentMethod"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Payment Method: "
+            android:text="@string/label_payment_method"
             android:layout_marginTop="8dp" />
 
         <TextView
             android:id="@+id/tvDetailPickupLocation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Pickup Location: "
-            android:layout_marginTop="8dp" />
+            android:text="@string/label_pickup_location"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tvDetailDeliveryLocation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Delivery Location: "
-            android:layout_marginTop="8dp" />
+            android:text="@string/label_delivery_location"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tvDetailComment"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Comment: "
+            android:text="@string/label_comment"
             android:layout_marginTop="8dp" />
 
         <TextView
             android:id="@+id/tvDetailSubmittedAt"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Submitted At: "
+            android:text="@string/label_submitted_at"
+            android:layout_marginTop="8dp" />
+
+        <!-- Progress label and bar -->
+        <TextView
+            android:id="@+id/tvDetailProgressLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/label_progress"
+            android:layout_marginTop="12dp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/progressBarRequest"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="0"
+            android:indeterminate="false"
             android:layout_marginTop="8dp" />
 
         <Button
             android:id="@+id/btnClose"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Close"
+            android:text="@string/close"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="16dp" />
     </LinearLayout>
-</ScrollView> 
+</ScrollView>

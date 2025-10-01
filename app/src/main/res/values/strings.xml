@@ -9,8 +9,50 @@
     <string name="action_sign_in_short">Sign in</string>
     <string name="welcome">"Welcome !"</string>
     <string name="invalid_username">Not a valid username</string>
-    <string name="invalid_password">Password must be >5 characters</string>
+    <string name="invalid_password">Password must be &gt;5 characters</string>
     <string name="login_failed">"Login failed"</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <!-- Labels for customer track item -->
+    <string name="label_request_id">Request ID:</string>
+    <string name="label_date_requested">Date Requested:</string>
+    <string name="label_status">Status:</string>
+    <string name="more">More</string>
+    <string name="mark_as_complete">Mark as Complete</string>
+
+    <!-- Formatted strings (use these in code to avoid concatenation) -->
+    <string name="request_id_format">Request ID: %1$d</string>
+    <string name="date_requested_format">Date Requested: %1$s</string>
+    <string name="sack_qty_format">Sack Quantity: %1$d</string>
+    <string name="service_format">Service: %1$s</string>
+    <string name="pickup_location_format">Pickup Location: %1$s</string>
+    <string name="delivery_location_format">Delivery Location: %1$s</string>
+    <string name="payment_method_format">Payment Method: %1$s</string>
+    <string name="status_format">Status: %1$s</string>
+
+    <!-- Dialog labels -->
+    <string name="request_details_title">Request Details</string>
+    <string name="label_customer">Customer:</string>
+    <string name="label_sacks">Sacks:</string>
+    <string name="label_services">Services:</string>
+    <string name="label_schedule">Schedule:</string>
+    <string name="label_payment_method">Payment Method:</string>
+    <string name="label_pickup_location">Pickup Location:</string>
+    <string name="label_delivery_location">Delivery Location:</string>
+    <string name="label_comment">Comment:</string>
+    <string name="label_submitted_at">Submitted At:</string>
+    <string name="label_progress">Progress:</string>
+
+    <string name="customer_format">Customer: %1$s</string>
+    <string name="sacks_format">Sacks: %1$d</string>
+    <string name="services_format">Services: %1$s</string>
+    <string name="schedule_format">Schedule: %1$s</string>
+    <string name="comment_format">Comment: %1$s</string>
+    <string name="submitted_at_format">Submitted At: %1$s</string>
+    <string name="close">Close</string>
+
+    <!-- Progress -->
+    <string name="progress_format">Progress: %1$d%%</string>
+
 </resources>
