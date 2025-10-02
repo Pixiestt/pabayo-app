@@ -35,7 +35,7 @@
     <string name="label_customer">Customer:</string>
     <string name="label_sacks">Sacks:</string>
     <string name="label_services">Services:</string>
-    <string name="label_schedule">Schedule:</string>
+    <string name="label_schedule">Pickup Schedule:</string>
     <string name="label_pickup_location">Pickup Location:</string>
     <string name="label_delivery_location">Delivery Location:</string>
     <string name="label_comment">Comment:</string>
@@ -45,7 +45,10 @@
     <string name="customer_format">Customer: %1$s</string>
     <string name="sacks_format">Sacks: %1$d</string>
     <string name="services_format">Services: %1$s</string>
-    <string name="schedule_format">Schedule: %1$s</string>
+    <string name="schedule_format">Pickup Schedule: %1$s</string>
+    <!-- Owner track uses a shorter label 'Schedule:' per request -->
+    <string name="label_schedule_owner">Schedule:</string>
+    <string name="schedule_format_owner">Schedule: %1$s</string>
     <string name="comment_format">Comment: %1$s</string>
     <string name="submitted_at_format">Submitted At: %1$s</string>
     <string name="close">Close</string>
@@ -94,4 +97,5 @@
     <string name="hint_new_password_confirm">Confirm new password</string>
     <string name="error_password_mismatch">Passwords do not match</string>
     <string name="error_old_password_required">Please enter your current password</string>
+    <string name="not_set">Not set</string>
 </resources>

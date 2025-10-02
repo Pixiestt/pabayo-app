@@ -28,7 +28,7 @@ class CustomerFragmentRequest : Fragment() {
         val btnStartWizard = view.findViewById<Button>(R.id.btnStartWizard)
         val tvTitle = view.findViewById<TextView>(R.id.tvTitle)
         val tvDescription = view.findViewById<TextView>(R.id.tvDescription)
-        
+
         tvTitle.text = "Create New Request"
         tvDescription.text = "Use our step-by-step wizard to create your rice milling request easily and quickly."
         
@@ -45,7 +45,7 @@ class CustomerFragmentRequest : Fragment() {
                     .setPositiveButton("OK", null)
                     .show()
             } else {
-                // Proceed to the request wizard
+                // Proceed to the request wizard.
                 val intent = Intent(requireContext(), RequestWizardActivity::class.java)
                 startActivity(intent)
             }

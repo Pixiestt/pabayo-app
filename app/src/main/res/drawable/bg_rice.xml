@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Wrapper drawable used as android:windowBackground to apply the JPEG as a full-window background. -->
+    <item>
+        <bitmap
+            android:src="@drawable/rice_background"
+            android:antialias="true"
+            android:filter="true"
+            android:gravity="fill" />
+    </item>
+</layer-list>
+

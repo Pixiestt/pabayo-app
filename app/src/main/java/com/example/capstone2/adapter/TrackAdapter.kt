@@ -41,20 +41,22 @@ class TrackAdapter(
 
     override fun onBindViewHolder(holder: TrackViewHolder, position: Int) {
         val req = requests[position]
+        val ctx = holder.itemView.context
         holder.customerName.text = req.customerName
-        holder.tvSackQty.text = "Sacks: ${req.sackQuantity}"
-        holder.tvServices.text = "Services: ${req.serviceName}"
-        holder.tvSchedule.text = "Schedule: ${req.schedule}"
+        holder.tvSackQty.text = ctx.getString(R.string.sacks_format, req.sackQuantity)
+        holder.tvServices.text = ctx.getString(R.string.services_format, req.serviceName)
+        // Owner track should display the shorter label 'Schedule:' per request
+        holder.tvSchedule.text = ctx.getString(R.string.schedule_format_owner, req.schedule ?: ctx.getString(R.string.not_set))
 
         // Handle pickup location
         if (!req.pickupLocation.isNullOrEmpty()) {
-            holder.tvPickupLocation.text = "Pickup Location: ${req.pickupLocation}"
+            holder.tvPickupLocation.text = ctx.getString(R.string.pickup_location_format, req.pickupLocation)
             holder.tvPickupLocation.visibility = View.VISIBLE
         } else {
             // Check if service includes pickup (serviceID 1,2,5,6)
             when (req.serviceID) {
                 1L, 2L, 5L, 6L -> {
-                    holder.tvPickupLocation.text = "Pickup Location: Not specified"
+                    holder.tvPickupLocation.text = ctx.getString(R.string.pickup_location_format, ctx.getString(R.string.not_set))
                     holder.tvPickupLocation.visibility = View.VISIBLE
                 }
                 else -> holder.tvPickupLocation.visibility = View.GONE
@@ -63,13 +65,13 @@ class TrackAdapter(
 
         // Handle delivery location
         if (!req.deliveryLocation.isNullOrEmpty()) {
-            holder.tvDeliveryLocation.text = "Delivery Location: ${req.deliveryLocation}"
+            holder.tvDeliveryLocation.text = ctx.getString(R.string.delivery_location_format, req.deliveryLocation)
             holder.tvDeliveryLocation.visibility = View.VISIBLE
         } else {
             // Check if service includes delivery (serviceID 1,3,5,7)
             when (req.serviceID) {
                 1L, 3L, 5L, 7L -> {
-                    holder.tvDeliveryLocation.text = "Delivery Location: Not specified"
+                    holder.tvDeliveryLocation.text = ctx.getString(R.string.delivery_location_format, ctx.getString(R.string.not_set))
                     holder.tvDeliveryLocation.visibility = View.VISIBLE
                 }
                 else -> holder.tvDeliveryLocation.visibility = View.GONE
@@ -78,8 +80,8 @@ class TrackAdapter(
 
         // Set current status text
         val currentStatusText = getStatusText(req.statusID.toInt())
-        holder.tvCurrentStatus.text = "Current Status: $currentStatusText"
-        
+        holder.tvCurrentStatus.text = ctx.getString(R.string.status_format, currentStatusText)
+
         // Set a color based on status
         val statusColor = when(req.statusID.toInt()) {
             10 -> "#4CAF50" // Green for accepted

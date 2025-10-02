@@ -18,6 +18,8 @@ class RequestRepository(private val apiService: ApiService) {
     companion object {
         // Simple in-memory cache mapping customerID -> raw JSON string of last-good response
         private val customerRequestsCache: MutableMap<Long, String> = mutableMapOf()
+        // Cache for owner requests raw JSON
+        private var ownerRequestsCache: String? = null
     }
 
     suspend fun createRequest(request: CreateRequest): Response<CreateRequest> {
@@ -37,15 +39,78 @@ class RequestRepository(private val apiService: ApiService) {
 
     suspend fun getOwnerRequests(): Response<RequestResponse> {
         Log.d("RequestRepository", "Getting owner requests")
-        val response = apiService.getOwnerRequests()
-        
-        if (response.isSuccessful) {
-            Log.d("RequestRepository", "Successfully fetched ${response.body()?.requests?.size ?: 0} owner requests")
-        } else {
-            Log.e("RequestRepository", "Failed to fetch owner requests: ${response.code()}")
+        try {
+            // Try the straightforward Retrofit call first. This may throw if Gson parsing fails.
+            val response = apiService.getOwnerRequests()
+            if (response.isSuccessful) {
+                Log.d("RequestRepository", "Successfully fetched ${response.body()?.requests?.size ?: 0} owner requests")
+                // Cache raw JSON of the parsed object for later fallback
+                try {
+                    val gson = Gson()
+                    val raw = gson.toJson(response.body())
+                    ownerRequestsCache = raw
+                } catch (ignore: Exception) {
+                    Log.w("RequestRepository", "Failed to cache owner requests response", ignore)
+                }
+            } else {
+                Log.e("RequestRepository", "Failed to fetch owner requests: ${response.code()}")
+            }
+            return response
+        } catch (e: Exception) {
+            // Parsing likely failed (e.g. EOFException from Gson). Attempt to fetch raw body and leniently parse.
+            Log.e("RequestRepository", "Owner requests parsing failed, attempting raw fallback", e)
         }
-        
-        return response
+
+        // Raw fallback: fetch response body as text and attempt to recover
+        try {
+            val rawResp = apiService.getOwnerRequestsRaw()
+            if (rawResp.isSuccessful) {
+                val body = rawResp.body()?.string() ?: ""
+                Log.d("RequestRepository", "Raw owner response length: ${body.length}")
+
+                // If the server returned a pure array, wrap it in an object with "requests" key
+                val trimmed = body.trim()
+                val fixed = when {
+                    trimmed.isEmpty() -> "{\"requests\":[] }"
+                    trimmed.startsWith("[") -> "{\"requests\":$trimmed}"
+                    else -> tryFixJsonObject(trimmed)
+                }
+
+                val gson = Gson()
+                val reader = JsonReader(StringReader(fixed))
+                reader.isLenient = true
+                val parsed: RequestResponse = gson.fromJson(reader, RequestResponse::class.java)
+                Log.d("RequestRepository", "Parsed ${parsed.requests.size} owner requests from raw fallback")
+
+                // Cache the fixed raw JSON string for future fallback
+                ownerRequestsCache = fixed
+
+                return Response.success(parsed)
+            } else {
+                Log.e("RequestRepository", "Raw owner fetch failed: ${rawResp.code()}")
+            }
+        } catch (inner: Exception) {
+            Log.e("RequestRepository", "Raw fallback parsing for owner requests failed", inner)
+        }
+
+        // Try cached owner requests if available
+        try {
+            val cached = ownerRequestsCache
+            if (!cached.isNullOrBlank()) {
+                Log.d("RequestRepository", "Parsing owner requests from in-memory cache")
+                val gson = Gson()
+                val reader = JsonReader(StringReader(cached))
+                reader.isLenient = true
+                val parsed: RequestResponse = gson.fromJson(reader, RequestResponse::class.java)
+                Log.d("RequestRepository", "Parsed ${parsed.requests.size} owner requests from cache")
+                return Response.success(parsed)
+            }
+        } catch (cacheEx: Exception) {
+            Log.e("RequestRepository", "Owner cache parsing failed", cacheEx)
+        }
+
+        // Nothing worked; rethrow a helpful exception
+        throw Exception("Failed to fetch owner requests: parsing and fallback attempts failed")
     }
 
     suspend fun acceptRequest(requestId: Long): Response<ResponseBody> {
@@ -183,6 +248,31 @@ class RequestRepository(private val apiService: ApiService) {
         // Remove trailing commas before a closing bracket: ", ]" -> "]"
         // Use a properly escaped regex string: match comma + optional whitespace + closing bracket
         s = s.replace(Regex(",\\s*]"), "]")
+        return s
+    }
+
+    /**
+     * Make lightweight repairs to a JSON object that may be truncated or missing a closing brace.
+     */
+    private fun tryFixJsonObject(body: String): String {
+        var s = body.trim()
+        if (s.isEmpty()) return "{\"requests\":[] }"
+        // If it looks like an array wrapped as a top-level value, wrap it
+        if (s.startsWith("[")) return "{\"requests\":$s}"
+        // Add a closing brace if missing
+        if (!s.endsWith("}")) s = s + "}"
+        // Remove trailing commas before a closing brace
+        s = s.replace(Regex(",\\s*}"), "}")
+        // If the top-level does not contain "requests" but contains an array field, try to find it
+        if (!s.contains("\"requests\"")) {
+            // Best-effort: if it contains a top-level field whose value is an array, wrap it
+            val arrayMatch = Regex("(\"[a-zA-Z0-9_]+\"\\s*:\\s*\\[)")
+            val m = arrayMatch.find(s)
+            if (m != null) {
+                // wrap the entire object under requests
+                return "{\"requests\":${s}}"
+            }
+        }
         return s
     }
 

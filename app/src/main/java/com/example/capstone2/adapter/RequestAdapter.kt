@@ -30,9 +30,13 @@ class RequestAdapter(
 
     override fun onBindViewHolder(holder: RequestViewHolder, position: Int) {
         val request = requestList[position]
-        holder.tvSackQty.text = "Sacks: ${request.sackQuantity}"
-        holder.tvServices.text = "Services: ${request.serviceName}"
-        holder.tvSchedule.text = "Schedule: ${request.schedule ?: "Not set"}"
+        val ctx = holder.itemView.context
+        holder.tvSackQty.text = ctx.getString(R.string.sacks_format, request.sackQuantity)
+        holder.tvServices.text = ctx.getString(R.string.services_format, request.serviceName)
+        holder.tvSchedule.text = ctx.getString(
+            R.string.schedule_format,
+            request.schedule ?: ctx.getString(R.string.not_set)
+        )
 
         // Set up action button click handler
         holder.btnAction.setOnClickListener {
@@ -72,44 +76,44 @@ class RequestAdapter(
         val btnClose: Button = dialog.findViewById(R.id.btnClose)
         
         // Set text values
-        tvDetailCustomerName.text = "Customer: ${request.customerName}"
-        tvDetailSackQty.text = "Sacks: ${request.sackQuantity}"
-        tvDetailServices.text = "Services: ${request.serviceName}"
-        tvDetailSchedule.text = "Schedule: ${request.schedule ?: "Not set"}"
+        tvDetailCustomerName.text = context.getString(R.string.customer_format, request.customerName)
+        tvDetailSackQty.text = context.getString(R.string.sacks_format, request.sackQuantity)
+        tvDetailServices.text = context.getString(R.string.services_format, request.serviceName)
+        tvDetailSchedule.text = context.getString(R.string.schedule_format, request.schedule ?: context.getString(R.string.not_set))
 
         // Show pickup location if available or if service requires it
         if (!request.pickupLocation.isNullOrEmpty()) {
-            tvDetailPickupLocation.text = "Pickup Location: ${request.pickupLocation}"
-            tvDetailPickupLocation.visibility = View.VISIBLE
-        } else {
-            // Check if service includes pickup (serviceID 1,2,5,6)
-            when (request.serviceID) {
-                1L, 2L, 5L, 6L -> {
-                    tvDetailPickupLocation.text = "Pickup Location: Not specified"
-                    tvDetailPickupLocation.visibility = View.VISIBLE
-                }
-                else -> tvDetailPickupLocation.visibility = View.GONE
-            }
-        }
+            tvDetailPickupLocation.text = context.getString(R.string.pickup_location_format, request.pickupLocation)
+             tvDetailPickupLocation.visibility = View.VISIBLE
+         } else {
+             // Check if service includes pickup (serviceID 1,2,5,6)
+             when (request.serviceID) {
+                 1L, 2L, 5L, 6L -> {
+                    tvDetailPickupLocation.text = context.getString(R.string.pickup_location_format, "Not specified")
+                     tvDetailPickupLocation.visibility = View.VISIBLE
+                 }
+                 else -> tvDetailPickupLocation.visibility = View.GONE
+             }
+         }
 
-        // Show delivery location if available or if service requires it
-        if (!request.deliveryLocation.isNullOrEmpty()) {
-            tvDetailDeliveryLocation.text = "Delivery Location: ${request.deliveryLocation}"
-            tvDetailDeliveryLocation.visibility = View.VISIBLE
-        } else {
-            // Check if service includes delivery (serviceID 1,3,5,7)
-            when (request.serviceID) {
-                1L, 3L, 5L, 7L -> {
-                    tvDetailDeliveryLocation.text = "Delivery Location: Not specified"
-                    tvDetailDeliveryLocation.visibility = View.VISIBLE
-                }
-                else -> tvDetailDeliveryLocation.visibility = View.GONE
-            }
-        }
-        
-        tvDetailComment.text = "Comment: ${request.comment ?: "None"}"
-        tvDetailSubmittedAt.text = "Submitted At: ${request.submittedAt ?: "Unknown"}"
-        
+         // Show delivery location if available or if service requires it
+         if (!request.deliveryLocation.isNullOrEmpty()) {
+            tvDetailDeliveryLocation.text = context.getString(R.string.delivery_location_format, request.deliveryLocation)
+             tvDetailDeliveryLocation.visibility = View.VISIBLE
+         } else {
+             // Check if service includes delivery (serviceID 1,3,5,7)
+             when (request.serviceID) {
+                 1L, 3L, 5L, 7L -> {
+                    tvDetailDeliveryLocation.text = context.getString(R.string.delivery_location_format, "Not specified")
+                     tvDetailDeliveryLocation.visibility = View.VISIBLE
+                 }
+                 else -> tvDetailDeliveryLocation.visibility = View.GONE
+             }
+         }
+
+        tvDetailComment.text = context.getString(R.string.comment_format, request.comment ?: "None")
+        tvDetailSubmittedAt.text = context.getString(R.string.submitted_at_format, request.submittedAt ?: "Unknown")
+
         // Close button handler
         btnClose.setOnClickListener {
             dialog.dismiss()

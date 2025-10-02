@@ -38,7 +38,7 @@
             android:id="@+id/tvSchedule"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Schedule: " />
+            android:text="@string/label_schedule_owner" />
 
         <TextView
             android:id="@+id/tvPickupLocation"
