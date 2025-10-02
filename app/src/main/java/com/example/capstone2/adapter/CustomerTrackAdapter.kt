@@ -105,7 +105,7 @@ class CustomerTrackAdapter(
         tvDetailCustomerName.text = context.getString(R.string.customer_format, request.customerName)
         tvDetailSackQty.text = context.getString(R.string.sacks_format, request.sackQuantity)
         tvDetailServices.text = context.getString(R.string.services_format, request.serviceName)
-        tvDetailSchedule.text = context.getString(R.string.schedule_format, request.schedule ?: "Not set")
+        tvDetailSchedule.text = context.getString(R.string.schedule_format, request.schedule ?: context.getString(R.string.not_set))
 
         // Show pickup location if available or if service requires it
         if (!request.pickupLocation.isNullOrEmpty()) {
@@ -173,7 +173,7 @@ class CustomerTrackAdapter(
             } else {
                 btnEdit.visibility = View.GONE
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             btnEdit.visibility = View.GONE
         }
 

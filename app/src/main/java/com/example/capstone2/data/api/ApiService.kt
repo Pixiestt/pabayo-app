@@ -29,6 +29,10 @@ interface ApiService {
     @GET("api/owner/requests")
     suspend fun getOwnerRequests(): Response<RequestResponse>
 
+    // Raw endpoint to fetch owner requests body as ResponseBody so caller can attempt lenient parsing
+    @GET("api/owner/requests")
+    suspend fun getOwnerRequestsRaw(): Response<okhttp3.ResponseBody>
+
     @GET("api/profile")
     suspend fun getProfile(): Response<User>
 
