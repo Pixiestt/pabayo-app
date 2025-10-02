@@ -112,28 +112,44 @@
                 android:gravity="center_vertical"
                 android:layout_marginBottom="24dp">
 
-                <TextView
-                    android:layout_width="0dp"
+                <!-- RadioGroup with Yes / No options for feeds conversion -->
+                <RadioGroup
+                    android:id="@+id/radioGroupFeeds"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Yes"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp"
+                    android:padding="4dp">
 
-                <Switch
-                    android:id="@+id/switchFeedsConversion"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true" />
+                    <RadioButton
+                        android:id="@+id/radioFeedsYes"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Yes"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:buttonTint="@color/primary_main"
+                        android:padding="12dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="?attr/selectableItemBackgroundBorderless" />
 
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="No"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:gravity="end" />
+                    <RadioButton
+                        android:id="@+id/radioFeedsNo"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="No"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:gravity="end"
+                        android:buttonTint="@color/primary_main"
+                        android:padding="12dp"
+                        android:layout_marginStart="8dp"
+                        android:background="?attr/selectableItemBackgroundBorderless" />
+
+                </RadioGroup>
 
             </LinearLayout>
 

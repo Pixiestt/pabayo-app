@@ -23,6 +23,9 @@
 
         <!-- Use primary as default accent for ripple/controls where Material uses colorControlActivated -->
         <item name="colorControlActivated">@color/primary_main</item>
+
+        <!-- App-wide window background (uses wrapper drawable to scale/crop the JPEG) -->
+        <item name="android:windowBackground">@drawable/bg_rice</item>
     </style>
 
     <style name="Theme.Capstone" parent="Base.Theme.Capstone" />

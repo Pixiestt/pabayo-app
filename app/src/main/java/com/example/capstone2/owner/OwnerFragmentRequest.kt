@@ -20,6 +20,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.example.capstone2.data.models.Request
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 class OwnerFragmentRequest : Fragment(R.layout.owner_fragment_request) {
 
@@ -70,8 +81,8 @@ class OwnerFragmentRequest : Fragment(R.layout.owner_fragment_request) {
             // ONLY show requests with statusID 1 (Subject for approval)
             val pendingRequests = requests?.filter { 
                 try {
-                    it.statusID.toInt() == 1 // Only show "Subject for approval" requests
-                } catch (e: NumberFormatException) {
+                    it.statusID == 1 // Only show "Subject for approval" requests
+                } catch (e: Exception) {
                     Log.e("OwnerFragmentRequest", "Invalid status ID: ${it.statusID}", e)
                     false
                 }
@@ -85,7 +96,12 @@ class OwnerFragmentRequest : Fragment(R.layout.owner_fragment_request) {
             }
             
             if (!pendingRequests.isNullOrEmpty()) {
-                requestAdapter.updateRequests(pendingRequests)
+                // Sort pending requests chronologically: oldest first (top) -> newest last (bottom)
+                // Use requestID as a deterministic tiebreaker when dates are equal or missing
+                val sorted = pendingRequests.sortedWith(
+                    compareBy<Request>({ parseDateForRequest(it) ?: Date(Long.MAX_VALUE) }, { it.requestID })
+                )
+                requestAdapter.updateRequests(sorted)
             } else {
                 requestAdapter.updateRequests(emptyList())
                 Toast.makeText(requireContext(), "No pending approval requests found", Toast.LENGTH_SHORT).show()
@@ -96,7 +112,81 @@ class OwnerFragmentRequest : Fragment(R.layout.owner_fragment_request) {
         refreshRequestsList()
     }
     
-    private fun showActionDialog(request: com.example.capstone2.data.models.Request) {
+    // Try to parse relevant date/time fields on Request. Return Date or null.
+    private fun parseDateForRequest(request: Request): Date? {
+        val candidates = listOf(request.submittedAt, request.dateUpdated, request.pickupDate, request.deliveryDate, request.schedule)
+
+        for (c in candidates) {
+            if (c.isNullOrBlank()) continue
+            val trimmed = c.trim()
+
+            // 1) Try java.time Instant/OffsetDateTime parsing for ISO formats (fast and robust)
+            try {
+                // Handles strings like 2023-08-01T12:34:56Z
+                val instant = Instant.parse(trimmed)
+                return Date.from(instant)
+            } catch (_: DateTimeParseException) {
+                // not ISO_INSTANT, try offset aware parser
+            }
+
+            try {
+                val odt = OffsetDateTime.parse(trimmed, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                return Date.from(odt.toInstant())
+            } catch (_: DateTimeParseException) {
+                // try next
+            }
+
+            // 2) Try common local datetime / date patterns with java.time
+            try {
+                val ldt = LocalDateTime.parse(trimmed, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
+                return Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant())
+            } catch (_: DateTimeParseException) {
+                // try next
+            }
+
+            try {
+                val ld = LocalDate.parse(trimmed, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                return Date.from(ld.atStartOfDay(ZoneId.systemDefault()).toInstant())
+            } catch (_: DateTimeParseException) {
+                // try fallback to SimpleDateFormat
+            }
+
+            // 3) Fallback: older SimpleDateFormat patterns (keeps previous behavior)
+            val formats = listOf(
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss",
+                "yyyy-MM-dd HH:mm:ss",
+                "yyyy-MM-dd"
+            )
+
+            for (fmt in formats) {
+                try {
+                    val sdf = SimpleDateFormat(fmt, Locale.getDefault())
+                    sdf.isLenient = true
+                    return sdf.parse(trimmed)
+                } catch (_: Exception) {
+                    // continue trying other patterns
+                }
+            }
+
+            // 4) As a last resort, try to parse the leading date portion (yyyy-MM-dd)
+            if (trimmed.length >= 10) {
+                val dateOnly = trimmed.substring(0, 10)
+                try {
+                    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    sdf.isLenient = true
+                    return sdf.parse(dateOnly)
+                } catch (_: Exception) {
+                    // ignore
+                }
+            }
+        }
+
+        return null
+    }
+
+    private fun showActionDialog(request: Request) {
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle("Request Action")
             .setMessage("Do you want to accept or reject this request?")
@@ -153,4 +243,3 @@ class OwnerFragmentRequest : Fragment(R.layout.owner_fragment_request) {
         }
     }
 }
-
