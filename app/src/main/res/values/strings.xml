@@ -109,5 +109,5 @@
     <string name="submit">Update</string>
 
     <!-- Add title string used in owner fragment -->
-    <string name="title_track">Track</string>
+    <string name="title_track">Update Status</string>
 </resources>

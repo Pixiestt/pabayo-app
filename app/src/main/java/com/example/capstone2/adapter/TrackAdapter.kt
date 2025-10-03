@@ -32,6 +32,8 @@ class TrackAdapter(
         val rbCPickup = itemView.findViewById<RadioButton>(R.id.rbCPickup)
 
         val btnSubmit = itemView.findViewById<Button>(R.id.btnSubmit)
+        // More button we added to show extra details (use ImageButton to match layout)
+        val btnMore = itemView.findViewById<android.widget.ImageButton>(R.id.btnMore)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TrackViewHolder {
@@ -48,35 +50,11 @@ class TrackAdapter(
         // Owner track should display the shorter label 'Schedule:' per request
         holder.tvSchedule.text = ctx.getString(R.string.schedule_format_owner, req.schedule ?: ctx.getString(R.string.not_set))
 
-        // Handle pickup location
-        if (!req.pickupLocation.isNullOrEmpty()) {
-            holder.tvPickupLocation.text = ctx.getString(R.string.pickup_location_format, req.pickupLocation)
-            holder.tvPickupLocation.visibility = View.VISIBLE
-        } else {
-            // Check if service includes pickup (serviceID 1,2,5,6)
-            when (req.serviceID) {
-                1L, 2L, 5L, 6L -> {
-                    holder.tvPickupLocation.text = ctx.getString(R.string.pickup_location_format, ctx.getString(R.string.not_set))
-                    holder.tvPickupLocation.visibility = View.VISIBLE
-                }
-                else -> holder.tvPickupLocation.visibility = View.GONE
-            }
-        }
+        // Pickup location is shown in the More dialog only; hide it in the item view
+        holder.tvPickupLocation.visibility = View.GONE
 
-        // Handle delivery location
-        if (!req.deliveryLocation.isNullOrEmpty()) {
-            holder.tvDeliveryLocation.text = ctx.getString(R.string.delivery_location_format, req.deliveryLocation)
-            holder.tvDeliveryLocation.visibility = View.VISIBLE
-        } else {
-            // Check if service includes delivery (serviceID 1,3,5,7)
-            when (req.serviceID) {
-                1L, 3L, 5L, 7L -> {
-                    holder.tvDeliveryLocation.text = ctx.getString(R.string.delivery_location_format, ctx.getString(R.string.not_set))
-                    holder.tvDeliveryLocation.visibility = View.VISIBLE
-                }
-                else -> holder.tvDeliveryLocation.visibility = View.GONE
-            }
-        }
+        // Delivery location is shown in the More dialog only; hide it in the item view
+        holder.tvDeliveryLocation.visibility = View.GONE
 
         // Set current status text
         val currentStatusText = getStatusText(req.statusID.toInt())
@@ -211,6 +189,46 @@ class TrackAdapter(
             holder.btnSubmit.setOnClickListener(null)
             holder.rgStatusOptions.setOnCheckedChangeListener(null)
         }
+
+        // Wire the More button to show a dialog with extra details
+        holder.btnMore.setOnClickListener {
+            val detailsBuilder = StringBuilder()
+
+            // Include pickup location if visible or service requires pickup
+            if (!req.pickupLocation.isNullOrEmpty()) {
+                detailsBuilder.append("Pickup location: ${req.pickupLocation}\n")
+            } else {
+                when (req.serviceID) {
+                    1L, 2L, 5L, 6L -> detailsBuilder.append("Pickup location: Not set\n")
+                }
+            }
+
+            // Include delivery location if visible or service requires delivery
+            if (!req.deliveryLocation.isNullOrEmpty()) {
+                detailsBuilder.append("Delivery location: ${req.deliveryLocation}\n")
+            } else {
+                when (req.serviceID) {
+                    1L, 3L, 5L, 7L -> detailsBuilder.append("Delivery location: Not set\n")
+                }
+            }
+
+            // Comment
+            detailsBuilder.append("Comment: ${if (!req.comment.isNullOrEmpty()) req.comment else "None"}\n")
+
+            // Contact number — use Request.contactNumber if available
+            val contact = if (!req.contactNumber.isNullOrEmpty()) req.contactNumber else "Not available"
+            detailsBuilder.append("Contact number: $contact")
+
+            val message = detailsBuilder.toString().trim()
+
+            // Show dialog
+            android.app.AlertDialog.Builder(ctx)
+                .setTitle("Details")
+                .setMessage(if (message.isNotEmpty()) message else "No additional details")
+                .setPositiveButton("Close", null)
+                .show()
+        }
+
     }
 
     override fun getItemCount(): Int = requests.size

@@ -25,5 +25,7 @@ data class Request(
     val deliveryLocation: String?,
     // optional fields returned by API when available
     val feedsConversion: Boolean? = null,
-    val millingType: String? = null
+    val millingType: String? = null,
+    // optional contact number for customer (may not be provided by server)
+    val contactNumber: String? = null
 ) : Parcelable
