@@ -9,6 +9,8 @@ import com.example.capstone2.data.models.RegisterResponse
 import com.example.capstone2.data.models.Request
 import com.example.capstone2.data.models.RequestResponse
 import com.example.capstone2.data.models.User
+import com.example.capstone2.data.models.Message
+import com.example.capstone2.data.models.SendMessageRequest
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
@@ -81,4 +83,16 @@ interface ApiService {
         @Path("requestID") requestID: Long,
         @Body request: CreateRequest
     ): Response<CreateRequest>
+
+    // Chat endpoints
+    @GET("api/messages/conversation")
+    suspend fun getConversation(
+        @Query("conversationID") conversationID: String? = null,
+        @Query("otherUserID") otherUserID: Long? = null,
+        @Query("limit") limit: Int = 50,
+        @Query("beforeMessageID") beforeMessageID: Int? = null
+    ): Response<List<Message>>
+
+    @POST("api/messages/send")
+    suspend fun sendMessage(@Body request: SendMessageRequest): Response<Message>
 }
