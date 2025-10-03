@@ -22,6 +22,7 @@ import androidx.core.widget.addTextChangedListener
 class PickupServiceFragment : Fragment() {
     
     private lateinit var radioGroup: RadioGroup
+    private lateinit var pickupDetailsContainer: View
     private lateinit var etPickupLocation: EditText
     private lateinit var etPickupDate: EditText
     private lateinit var btnNext: Button
@@ -44,6 +45,7 @@ class PickupServiceFragment : Fragment() {
         
         // Initialize views
         radioGroup = view.findViewById(R.id.radioGroupPickup)
+        pickupDetailsContainer = view.findViewById(R.id.pickupDetailsContainer)
         etPickupLocation = view.findViewById(R.id.etPickupLocation)
         etPickupDate = view.findViewById(R.id.etPickupDate)
         btnNext = view.findViewById(R.id.btnNext)
@@ -61,25 +63,36 @@ class PickupServiceFragment : Fragment() {
             }
         }
 
+        // If wizard has stored pickup location/date, show container and set values
+        var hasPrefill = false
         wizard.pickupLocation?.let { loc ->
             etPickupLocation.setText(loc)
-            etPickupLocation.visibility = View.VISIBLE
+            hasPrefill = true
         }
         wizard.pickupDate?.let { pd ->
             etPickupDate.setText(pd)
+            hasPrefill = true
+        }
+        if (hasPrefill) {
+            pickupDetailsContainer.visibility = View.VISIBLE
+            // ensure date field visible (XML had it gone)
             etPickupDate.visibility = View.VISIBLE
         }
 
-        // Initially hide the location input and pickup date when selection is drop off
-        if (radioGroup.checkedRadioButtonId == R.id.rbDropOffAtFacility) {
-            etPickupLocation.visibility = View.GONE
-            etPickupDate.visibility = View.GONE
-        } else if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromLocation) {
-            etPickupLocation.visibility = View.VISIBLE
-            etPickupDate.visibility = View.VISIBLE
-        } else {
-            etPickupLocation.visibility = View.GONE
-            etPickupDate.visibility = View.GONE
+        // Initially hide or show the container depending on radio selection
+        when (radioGroup.checkedRadioButtonId) {
+            R.id.rbDropOffAtFacility -> {
+                pickupDetailsContainer.visibility = View.GONE
+                etPickupDate.visibility = View.GONE
+            }
+            R.id.rbPickupFromLocation -> {
+                pickupDetailsContainer.visibility = View.VISIBLE
+                etPickupDate.visibility = View.VISIBLE
+            }
+            else -> {
+                pickupDetailsContainer.visibility = View.GONE
+                etPickupDate.visibility = View.GONE
+            }
         }
 
         setNextEnabled(false)
@@ -91,7 +104,7 @@ class PickupServiceFragment : Fragment() {
                     Log.d(TAG, "Selected: Pickup from location")
                     Toast.makeText(requireContext(), "Pickup from location selected", Toast.LENGTH_SHORT).show()
                     activity.getWizardData().pickupService = PickupService.PICKUP_FROM_LOCATION
-                    etPickupLocation.visibility = View.VISIBLE
+                    pickupDetailsContainer.visibility = View.VISIBLE
                     etPickupDate.visibility = View.VISIBLE
                     validateForm()
                 }
@@ -99,10 +112,10 @@ class PickupServiceFragment : Fragment() {
                     Log.d(TAG, "Selected: Drop off at facility")
                     Toast.makeText(requireContext(), "Drop off at facility selected", Toast.LENGTH_SHORT).show()
                     activity.getWizardData().pickupService = PickupService.DROP_OFF_AT_FACILITY
-                    etPickupLocation.visibility = View.GONE
+                    pickupDetailsContainer.visibility = View.GONE
                     etPickupLocation.text.clear()
-                    etPickupDate.visibility = View.GONE
                     etPickupDate.text.clear()
+                    etPickupDate.visibility = View.GONE
                     validateForm()
                 }
                 else -> {

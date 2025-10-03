@@ -141,12 +141,14 @@
 
                 </RadioGroup>
 
-                <!-- Delivery Address Input -->
+                <!-- Delivery Address Input: wrap label+input in a container and hide by default -->
                 <LinearLayout
+                    android:id="@+id/deliveryAddressContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:layout_marginTop="24dp">
+                    android:layout_marginTop="24dp"
+                    android:visibility="gone">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -163,8 +165,7 @@
                         android:background="@drawable/edit_text_background"
                         android:hint="Enter your delivery address"
                         android:padding="16dp"
-                        android:textSize="16sp"
-                        android:visibility="gone" />
+                        android:textSize="16sp" />
 
                 </LinearLayout>
 

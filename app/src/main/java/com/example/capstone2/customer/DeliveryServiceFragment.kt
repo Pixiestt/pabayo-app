@@ -8,17 +8,16 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.example.capstone2.R
-import com.example.capstone2.data.models.RequestWizardData
 import com.example.capstone2.data.models.DeliveryService
 
 class DeliveryServiceFragment : Fragment() {
     
     private lateinit var radioGroup: RadioGroup
+    private lateinit var deliveryAddressContainer: View
     private lateinit var etDeliveryLocation: EditText
     private lateinit var btnNext: Button
     private lateinit var tvStepProgress: TextView
@@ -35,6 +34,7 @@ class DeliveryServiceFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         
         radioGroup = view.findViewById(R.id.radioGroupDelivery)
+        deliveryAddressContainer = view.findViewById(R.id.deliveryAddressContainer)
         etDeliveryLocation = view.findViewById(R.id.etDeliveryLocation)
         btnNext = view.findViewById(R.id.btnNext)
         tvStepProgress = view.findViewById(R.id.tvStepProgress)
@@ -53,19 +53,23 @@ class DeliveryServiceFragment : Fragment() {
 
         wizard.deliveryLocation?.let { loc ->
             etDeliveryLocation.setText(loc)
-            etDeliveryLocation.visibility = View.VISIBLE
+            deliveryAddressContainer.visibility = View.VISIBLE
         }
 
-        // Initially hide the location input and disable Next button
-        if (radioGroup.checkedRadioButtonId == R.id.rbDeliverToLocation) {
-            etDeliveryLocation.visibility = View.VISIBLE
-            btnNext.isEnabled = etDeliveryLocation.text.toString().trim().isNotEmpty()
-        } else if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromFacility) {
-            etDeliveryLocation.visibility = View.GONE
-            btnNext.isEnabled = true
-        } else {
-            etDeliveryLocation.visibility = View.GONE
-            btnNext.isEnabled = false
+        // Initially hide/show the container and set the Next button accordingly
+        when (radioGroup.checkedRadioButtonId) {
+            R.id.rbDeliverToLocation -> {
+                deliveryAddressContainer.visibility = View.VISIBLE
+                btnNext.isEnabled = etDeliveryLocation.text.toString().trim().isNotEmpty()
+            }
+            R.id.rbPickupFromFacility -> {
+                deliveryAddressContainer.visibility = View.GONE
+                btnNext.isEnabled = true
+            }
+            else -> {
+                deliveryAddressContainer.visibility = View.GONE
+                btnNext.isEnabled = false
+            }
         }
 
         // Set up radio button listeners
@@ -73,12 +77,12 @@ class DeliveryServiceFragment : Fragment() {
             when (checkedId) {
                 R.id.rbDeliverToLocation -> {
                     activity.getWizardData().deliveryService = DeliveryService.DELIVER_TO_LOCATION
-                    etDeliveryLocation.visibility = View.VISIBLE
+                    deliveryAddressContainer.visibility = View.VISIBLE
                     validateForm()
                 }
                 R.id.rbPickupFromFacility -> {
                     activity.getWizardData().deliveryService = DeliveryService.PICKUP_FROM_FACILITY
-                    etDeliveryLocation.visibility = View.GONE
+                    deliveryAddressContainer.visibility = View.GONE
                     etDeliveryLocation.text.clear()
                     btnNext.isEnabled = true
                 }
@@ -115,6 +119,10 @@ class DeliveryServiceFragment : Fragment() {
     private fun validateForm() {
         if (radioGroup.checkedRadioButtonId == R.id.rbDeliverToLocation) {
             btnNext.isEnabled = etDeliveryLocation.text.toString().trim().isNotEmpty()
+        } else if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromFacility) {
+            btnNext.isEnabled = true
+        } else {
+            btnNext.isEnabled = false
         }
     }
 }
