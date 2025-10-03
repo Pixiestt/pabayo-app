@@ -90,12 +90,24 @@
     <string name="error_contact_invalid">Contact must be 11 digits</string>
     <string name="error_address_required">Please enter your home address</string>
     <string name="error_new_password_short">New password must be at least 8 characters</string>
-    <string name="saving_profile">Saving...</string>
-    <string name="saving_password">Updating password...</string>
+    <string name="saving_profile">Saving…</string>
+    <string name="saving_password">Updating password…</string>
 
     <!-- New password confirmation -->
     <string name="hint_new_password_confirm">Confirm new password</string>
     <string name="error_password_mismatch">Passwords do not match</string>
     <string name="error_old_password_required">Please enter your current password</string>
     <string name="not_set">Not set</string>
+
+    <!-- Labels used in owner track item layout -->
+    <string name="rb_delivery_boy_pickup">Delivery Boy Pickup</string>
+    <string name="rb_waiting_customer_dropoff">Waiting for Customer Drop Off</string>
+    <string name="rb_pending">Pending</string>
+    <string name="rb_processing">Processing</string>
+    <string name="rb_out_for_delivery">Out for Delivery</string>
+    <string name="rb_waiting_customer_pickup">Waiting for Customer Pickup</string>
+    <string name="submit">Update</string>
+
+    <!-- Add title string used in owner fragment -->
+    <string name="title_track">Track</string>
 </resources>
