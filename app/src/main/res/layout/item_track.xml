@@ -7,156 +7,191 @@
     android:padding="12dp"
     android:radius="10dp">
 
-    <LinearLayout
+    <!-- Use a FrameLayout so we can overlay the More button pinned to the top-end -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:descendantFocusability="afterDescendants"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp">
+        android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/tvCustomerName"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_customer"
-            android:paddingTop="6dp"
-            android:textStyle="bold"
-            android:layout_marginBottom="6dp"
-            android:ellipsize="end"
-            android:maxLines="1" />
-
-        <TextView
-            android:id="@+id/tvSackQty"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_sacks"
-            android:layout_marginBottom="6dp" />
-
-        <TextView
-            android:id="@+id/tvServices"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_services"
-            android:layout_marginBottom="6dp" />
-
-        <TextView
-            android:id="@+id/tvSchedule"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_schedule_owner"
-            android:layout_marginBottom="6dp" />
-
-        <TextView
-            android:id="@+id/tvPickupLocation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_pickup_location"
-            android:visibility="visible"
-            android:layout_marginBottom="6dp" />
-
-        <TextView
-            android:id="@+id/tvDeliveryLocation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_delivery_location"
-            android:visibility="visible"
-            android:layout_marginBottom="6dp" />
-
-        <!-- Current Status TextView -->
-        <TextView
-            android:id="@+id/tvCurrentStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_status"
-            android:textStyle="bold"
-            android:textColor="#3F51B5"
-            android:layout_marginTop="6dp"
-            android:layout_marginBottom="8dp"
-            android:gravity="start"
-            android:padding="2dp" />
-
-        <!-- Divider below current status -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#DDDDDD"
-            android:layout_marginBottom="10dp" />
-
-        <RadioGroup
-            android:id="@+id/rgStatusOptions"
+        <!-- Main vertical content (unchanged, except removing inline More controls) -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
+            android:descendantFocusability="afterDescendants"
             android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:layout_marginBottom="8dp"> <!-- ensure group can handle focus in touch mode -->
+            android:paddingEnd="64dp"> <!-- reserve space on the right for the overlayed more button -->
 
-            <RadioButton
-                android:id="@+id/rbDpickup"
+            <TextView
+                android:id="@+id/tvCustomerName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/rb_delivery_boy_pickup"
-                android:textSize="14sp"
-                android:textColor="@android:color/black"
-                android:layout_marginBottom="4dp" />
+                android:text="@string/label_customer"
+                android:paddingTop="6dp"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"
+                android:ellipsize="end"
+                android:maxLines="1" />
 
-            <RadioButton
-                android:id="@+id/rbCDropoff"
+            <TextView
+                android:id="@+id/tvSackQty"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/rb_waiting_customer_dropoff"
-                android:textSize="14sp"
-                android:textColor="@android:color/black"
-                android:layout_marginBottom="4dp" />
+                android:text="@string/label_sacks"
+                android:layout_marginBottom="6dp" />
 
-            <RadioButton
-                android:id="@+id/rbPending"
+            <TextView
+                android:id="@+id/tvServices"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/rb_pending"
-                android:textSize="14sp"
-                android:textColor="@android:color/black"
-                android:layout_marginBottom="4dp" />
+                android:text="@string/label_services"
+                android:layout_marginBottom="6dp" />
 
-            <RadioButton
-                android:id="@+id/rbProcessing"
+            <TextView
+                android:id="@+id/tvSchedule"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/rb_processing"
-                android:textSize="14sp"
-                android:textColor="@android:color/black"
-                android:layout_marginBottom="4dp" />
+                android:text="@string/label_schedule_owner"
+                android:layout_marginBottom="6dp" />
 
-            <RadioButton
-                android:id="@+id/rbOutForDelivery"
+            <TextView
+                android:id="@+id/tvPickupLocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/rb_out_for_delivery"
-                android:textSize="14sp"
-                android:textColor="@android:color/black"
-                android:layout_marginBottom="4dp" />
+                android:text="@string/label_pickup_location"
+                android:visibility="gone"
+                android:layout_marginBottom="6dp" />
 
-            <RadioButton
-                android:id="@+id/rbCPickup"
+            <TextView
+                android:id="@+id/tvDeliveryLocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/rb_waiting_customer_pickup"
-                android:textSize="14sp"
-                android:textColor="@android:color/black"
-                android:layout_marginBottom="4dp" />
-        </RadioGroup>
+                android:text="@string/label_delivery_location"
+                android:visibility="gone"
+                android:layout_marginBottom="6dp" />
 
-        <Button
-            android:id="@+id/btnSubmit"
-            android:layout_gravity="end"
+            <!-- Current Status (full-width, but single line to avoid pushing overlay) -->
+            <TextView
+                android:id="@+id/tvCurrentStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_status"
+                android:textStyle="bold"
+                android:textColor="#3F51B5"
+                android:gravity="start"
+                android:padding="2dp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Divider below current status -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#DDDDDD"
+                android:layout_marginBottom="10dp" />
+
+            <RadioGroup
+                android:id="@+id/rgStatusOptions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:layout_marginBottom="8dp"> <!-- ensure group can handle focus in touch mode -->
+
+                <RadioButton
+                    android:id="@+id/rbDpickup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rb_delivery_boy_pickup"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/black"
+                    android:layout_marginBottom="4dp" />
+
+                <RadioButton
+                    android:id="@+id/rbCDropoff"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rb_waiting_customer_dropoff"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/black"
+                    android:layout_marginBottom="4dp" />
+
+                <RadioButton
+                    android:id="@+id/rbPending"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rb_pending"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/black"
+                    android:layout_marginBottom="4dp" />
+
+                <RadioButton
+                    android:id="@+id/rbProcessing"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rb_processing"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/black"
+                    android:layout_marginBottom="4dp" />
+
+                <RadioButton
+                    android:id="@+id/rbOutForDelivery"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rb_out_for_delivery"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/black"
+                    android:layout_marginBottom="4dp" />
+
+                <RadioButton
+                    android:id="@+id/rbCPickup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rb_waiting_customer_pickup"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/black"
+                    android:layout_marginBottom="4dp" />
+            </RadioGroup>
+
+            <Button
+                android:id="@+id/btnSubmit"
+                android:layout_gravity="end"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/submit"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp" />
+
+        </LinearLayout>
+
+        <!-- Overlay pinned to top-end so More control is always visible -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/submit"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="4dp" />
+            android:orientation="horizontal"
+            android:layout_gravity="end|top"
+            android:layout_marginTop="6dp"
+            android:layout_marginEnd="6dp"
+            android:gravity="center_vertical">
 
-    </LinearLayout>
+            <ImageButton
+                android:id="@+id/btnMore"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="More"
+                android:src="@drawable/ic_more_vert"
+                android:background="@drawable/bg_circle_icon"
+                android:foreground="?attr/selectableItemBackgroundBorderless"
+                android:tint="#333333"
+                android:scaleType="centerInside"
+                android:padding="6dp" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
 </androidx.cardview.widget.CardView>
