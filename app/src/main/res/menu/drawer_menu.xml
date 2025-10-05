@@ -21,6 +21,12 @@
         android:icon="@drawable/ic_history"
         android:title="@string/nav_history" />
 
+    <!-- Messages menu item -->
+    <item
+        android:id="@+id/messages"
+        android:icon="@drawable/ic_notification"
+        android:title="@string/nav_messages" />
+
     <!-- Profile menu item -->
     <item
         android:id="@+id/profile"
