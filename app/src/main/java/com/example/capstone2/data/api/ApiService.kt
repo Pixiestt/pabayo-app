@@ -91,8 +91,22 @@ interface ApiService {
         @Query("otherUserID") otherUserID: Long? = null,
         @Query("limit") limit: Int = 50,
         @Query("beforeMessageID") beforeMessageID: Int? = null
-    ): Response<List<Message>>
+    ): Response<okhttp3.ResponseBody>
+
+    // Fetch list of conversations for current user (envelope or array)
+    @GET("api/messages/conversations")
+    suspend fun getConversations(): Response<okhttp3.ResponseBody>
 
     @POST("api/messages/send")
-    suspend fun sendMessage(@Body request: SendMessageRequest): Response<Message>
+    suspend fun sendMessageRaw(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<okhttp3.ResponseBody>
+
+    // Fetch a user's profile by id. Assumption: backend provides an endpoint at /api/users/{userID}
+    // that returns a JSON matching the `User` data class. If your backend uses a different
+    // path, update this accordingly.
+    @GET("api/users/{userID}")
+    suspend fun getUser(@Path("userID") userID: Long): Response<User>
+
+    // Generic raw GET by relative URL (useful when server uses varying user endpoints)
+    @GET
+    suspend fun getRaw(@Url url: String): Response<okhttp3.ResponseBody>
 }

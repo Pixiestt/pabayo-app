@@ -11,6 +11,7 @@ import com.example.capstone2.data.models.ChangePasswordRequest
 import com.example.capstone2.network.ApiClient
 import retrofit2.Response
 import com.example.capstone2.network.getTokenProvider
+import com.example.capstone2.repository.SharedPrefManager
 
 
 class UserRepository(private val context: Context) {
@@ -26,8 +27,19 @@ class UserRepository(private val context: Context) {
     suspend fun loginUser(loginRequest: LoginRequest): Response<LoginResponse> {
         val response = apiService.login(loginRequest)
         if (response.isSuccessful) {
-            response.body()?.token?.let { token ->
-                SharedPrefManager(context).saveAuthToken(token)
+            response.body()?.let { body ->
+                body.token.let { token ->
+                    SharedPrefManager.saveAuthToken(context, token)
+                }
+                // Save userID if present
+                body.user?.let { user ->
+                    try {
+                        val uid = user.userID
+                        SharedPrefManager.saveUserId(context, uid)
+                    } catch (e: Exception) {
+                        // ignore if userID missing
+                    }
+                }
             }
         }
         return response

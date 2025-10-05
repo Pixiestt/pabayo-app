@@ -1,0 +1,51 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Message extends Model
+{
+    protected $table = 'messages_tbl';
+    protected $primaryKey = 'messageID';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    // If your table columns are createdAt/updatedAt (camelCase), tell Eloquent:
+    const CREATED_AT = 'createdAt';
+    const UPDATED_AT = 'updatedAt';
+
+    // If you don't have timestamps at all set: public $timestamps = false;
+    // public $timestamps = false;
+
+    protected $fillable = [
+        'conversationID',
+        'senderID',
+        'receiverID',
+        'message',
+        'messageType',
+        'isRead',
+        'isDeletedBySender',
+        'isDeletedByReceiver',
+    ];
+
+    protected $casts = [
+        'isRead' => 'boolean',
+        'isDeletedBySender' => 'boolean',
+        'isDeletedByReceiver' => 'boolean',
+        'messageID' => 'integer',
+        'senderID' => 'integer',
+        'receiverID' => 'integer',
+    ];
+
+    // Optional: relationship to User model (adjust namespace/name if needed)
+    public function sender()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'senderID');
+    }
+
+    public function receiver()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'receiverID');
+    }
+}

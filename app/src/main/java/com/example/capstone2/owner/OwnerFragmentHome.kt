@@ -59,8 +59,7 @@ class OwnerFragmentHome : Fragment(R.layout.owner_fragment_home) {
     }
     
     private fun navigateToHistory() {
-        // Change to History tab
-        val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottomNavigationView)
-        bottomNav.selectedItemId = R.id.history
+        // Request the activity to open the history fragment directly since history is not in bottom nav
+        (activity as? OwnerMainActivity)?.openHistory()
     }
 }

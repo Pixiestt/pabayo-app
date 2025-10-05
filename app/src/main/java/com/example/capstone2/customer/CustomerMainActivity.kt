@@ -13,11 +13,14 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.example.capstone2.R
+import com.example.capstone2.messages.MessagesFragment
 import com.example.capstone2.util.NotificationUtils
 import com.example.capstone2.util.PermissionUtils
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationView
 import android.view.View
+import androidx.activity.OnBackPressedCallback
+import androidx.core.content.edit
 
 class CustomerMainActivity : AppCompatActivity() {
     
@@ -46,7 +49,19 @@ class CustomerMainActivity : AppCompatActivity() {
         )
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
-        
+        // Handle system back (including back gestures) via OnBackPressedDispatcher to avoid deprecated onBackPressed
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                } else {
+                    // Fallback to default behavior (disable this callback and re-dispatch)
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         
         bottomNavigationView = findViewById(R.id.bottomNavigationView)
@@ -55,9 +70,9 @@ class CustomerMainActivity : AppCompatActivity() {
         val fragmentrequest = CustomerFragmentRequest()
         val fragmenttrack = CustomerFragmentTrack()
         val fragmenthistory = CustomerFragmentHistory()
-        val fragmentprofile = com.example.capstone2.customer.CustomerProfileFragment()
+        val fragmentprofile = CustomerProfileFragment()
 
-        // Register a fragment lifecycle callback to toggle bottom nav visibility
+        val fragmentmessages = MessagesFragment()
         supportFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
             override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
                 super.onFragmentViewCreated(fm, f, v, savedInstanceState)
@@ -92,13 +107,17 @@ class CustomerMainActivity : AppCompatActivity() {
         }
         
         // Setup bottom navigation
-        bottomNavigationView.setOnItemSelectedListener {
-            when(it.itemId) {
+        bottomNavigationView.setOnItemSelectedListener { item ->
+            when (item.itemId) {
                 R.id.home -> setCurrentFragment(fragmenthome)
                 R.id.request -> setCurrentFragment(fragmentrequest)
                 R.id.track -> setCurrentFragment(fragmenttrack)
                 R.id.history -> setCurrentFragment(fragmenthistory)
                 R.id.profile -> setCurrentFragment(fragmentprofile)
+                R.id.messages -> setCurrentFragment(fragmentmessages)
+                else -> {
+                    // no-op for unknown items
+                }
             }
             true
         }
@@ -113,14 +132,6 @@ class CustomerMainActivity : AppCompatActivity() {
         // Permission result handling could be added here if needed
     }
     
-    override fun onBackPressed() {
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.START)
-        } else {
-            super.onBackPressed()
-        }
-    }
-
     private fun setCurrentFragment(fragment: Fragment) =
         supportFragmentManager.beginTransaction().apply {
             replace(R.id.flFragment, fragment)
@@ -142,7 +153,11 @@ class CustomerMainActivity : AppCompatActivity() {
     // Clear stored auth and navigate to LoginActivity
     private fun performLogout() {
         val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
-        sharedPref.edit().remove("auth_token").remove("userID").apply()
+        // Use KTX edit extension which applies changes in the lambda
+        sharedPref.edit {
+            remove("auth_token")
+            remove("userID")
+        }
 
         val intent = Intent(this, com.example.capstone2.authentication.LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

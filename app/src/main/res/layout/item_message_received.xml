@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="start"
+    android:padding="4dp">
+
+    <LinearLayout
+        android:id="@+id/messageBubbleReceived"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="48dp"
+        android:layout_gravity="start"
+        android:background="@drawable/bg_message_received"
+        android:maxWidth="280dp"
+        android:padding="8dp"
+        android:orientation="vertical">
+
+        <!-- New: sender name shown above message for received messages -->
+        <TextView
+            android:id="@+id/tvSenderName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#333333"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tvMessageReceived"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#000000"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tvTimeReceived"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#666666"
+            android:textSize="11sp"
+            android:layout_marginTop="4dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

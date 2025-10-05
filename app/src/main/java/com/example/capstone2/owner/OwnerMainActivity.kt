@@ -14,6 +14,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.example.capstone2.R
+import com.example.capstone2.messages.MessagesFragment
 import com.example.capstone2.util.NotificationUtils
 import com.example.capstone2.util.PermissionUtils
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -22,7 +23,14 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 class OwnerMainActivity : AppCompatActivity() {
     
     private lateinit var bottomNavigationView: BottomNavigationView
-    
+
+    // Make fragment instances class-level so other fragments can request navigation
+    private lateinit var fragmenthome: OwnerFragmentHome
+    private lateinit var fragmentrequest: OwnerFragmentRequest
+    private lateinit var fragmenttrack: OwnerFragmentTrack
+    private lateinit var fragmenthistory: OwnerFragmentHistory
+    private lateinit var fragmentmessages: com.example.capstone2.messages.MessagesFragment
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -42,10 +50,12 @@ class OwnerMainActivity : AppCompatActivity() {
             insets
         }
 
-        val fragmenthome = OwnerFragmentHome()
-        val fragmentrequest = OwnerFragmentRequest()
-        val fragmenttrack = OwnerFragmentTrack()
-        val fragmenthistory = OwnerFragmentHistory()
+        // Initialize fragments
+        fragmenthome = OwnerFragmentHome()
+        fragmentrequest = OwnerFragmentRequest()
+        fragmenttrack = OwnerFragmentTrack()
+        fragmenthistory = OwnerFragmentHistory()
+        fragmentmessages = com.example.capstone2.messages.MessagesFragment()
 
         setCurrentFragment(fragmenthome)
 
@@ -70,10 +80,16 @@ class OwnerMainActivity : AppCompatActivity() {
                 R.id.home -> setCurrentFragment(fragmenthome)
                 R.id.request -> setCurrentFragment(fragmentrequest)
                 R.id.track -> setCurrentFragment(fragmenttrack)
-                R.id.history -> setCurrentFragment(fragmenthistory)
+                R.id.messages -> setCurrentFragment(fragmentmessages)
+                R.id.profile -> setCurrentFragment(com.example.capstone2.owner.OwnerFragmentProfile())
             }
             true
         }
+    }
+
+    // Expose a method so child fragments can open history directly
+    fun openHistory() {
+        setCurrentFragment(fragmenthistory)
     }
 
     override fun onRequestPermissionsResult(
