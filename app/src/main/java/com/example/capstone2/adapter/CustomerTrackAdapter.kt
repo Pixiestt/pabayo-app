@@ -7,9 +7,11 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.RecyclerView
 import com.example.capstone2.R
 import com.example.capstone2.data.models.Request
+import com.example.capstone2.repository.SharedPrefManager
 
 class CustomerTrackAdapter(
     private var requests: List<Request>,
@@ -100,6 +102,7 @@ class CustomerTrackAdapter(
         val progressBar: ProgressBar = dialog.findViewById(R.id.progressBarRequest)
         val btnClose: Button = dialog.findViewById(R.id.btnClose)
         val btnEdit: Button = dialog.findViewById(R.id.btnEdit)
+        val btnMessage: Button? = dialog.findViewById(R.id.btnMessage)
 
         // Use formatted string resources to populate the dialog
         tvDetailCustomerName.text = context.getString(R.string.customer_format, request.customerName)
@@ -175,6 +178,35 @@ class CustomerTrackAdapter(
             }
         } catch (_: Exception) {
             btnEdit.visibility = View.GONE
+        }
+
+        // Wire the Message button for customer-side access (open chat with owner)
+        btnMessage?.let { btn ->
+            btn.visibility = View.VISIBLE
+            btn.setOnClickListener {
+                // Use centralized SharedPrefManager to get current user id (robust)
+                val myId = SharedPrefManager.getUserId(context) ?: -1L
+
+                val otherId = if (myId == request.customerID) request.ownerID else request.customerID
+
+                val activity = context as? FragmentActivity
+                if (activity != null) {
+                    try {
+                        val chatFrag = com.example.capstone2.customer.ChatFragment.newInstance(otherId, null, null)
+                        dialog.dismiss()
+                        activity.supportFragmentManager.beginTransaction()
+                            .replace(R.id.flFragment, chatFrag)
+                            .addToBackStack(null)
+                            .commit()
+                    } catch (e: Exception) {
+                        dialog.dismiss()
+                        android.widget.Toast.makeText(context, "Unable to open chat: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    dialog.dismiss()
+                    android.widget.Toast.makeText(context, "Cannot open chat from this context", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
         btnClose.setOnClickListener {

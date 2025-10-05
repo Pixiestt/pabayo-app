@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:ignore="Autofill">
+
+    <!-- Top bar items -->
+    <TextView
+        android:id="@+id/tvChatTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:textAppearance="?attr/textAppearanceHeadline6"
+        android:textColor="@android:color/black"
+        android:gravity="center_vertical"
+        android:visibility="gone" />
+
+    <!-- Messages list fills fragment; put input inside fragment so it appears only in chat -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMessages"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="8dp"
+        android:paddingBottom="96dp"
+        android:clipToPadding="false"
+        android:layout_alignParentTop="true"
+        android:layout_below="@id/tvChatTitle"
+        android:layout_above="@+id/layoutInput" />
+
+    <!-- Input bar inside the fragment (styled to app colors, not debug yellow) -->
+    <LinearLayout
+        android:id="@+id/layoutInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="@color/card_background"
+        android:elevation="4dp"
+        android:minHeight="56dp">
+
+        <EditText
+            android:id="@+id/etMessage"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/hint_type_message"
+            android:textSize="16sp"
+            android:padding="8dp"
+            android:inputType="textMultiLine"
+            android:background="@drawable/edit_text_background"
+            android:importantForAutofill="no"
+            android:autofillHints="none" />
+
+        <ImageButton
+            android:id="@+id/btnSend"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_menu_send"
+            android:contentDescription="@string/send" />
+
+    </LinearLayout>
+
+</RelativeLayout>

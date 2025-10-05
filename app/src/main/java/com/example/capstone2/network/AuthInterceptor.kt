@@ -10,12 +10,14 @@ class AuthInterceptor(private val tokenProvider: () -> String?) : Interceptor {
         val token = tokenProvider()
 
         val requestBuilder = original.newBuilder()
-        token?.let {
+        // Always advertise we accept JSON so Laravel returns JSON errors instead of HTML redirects
+        requestBuilder.addHeader("Accept", "application/json")
+        if (token.isNullOrBlank()) {
+            Log.d("AuthInterceptor", "No auth token available; request will be unauthenticated")
+        } else {
             requestBuilder.addHeader("Authorization", "Bearer $token")
-            Log.d("AuthInterceptor", "Attaching token: Bearer $token")
+            Log.d("AuthInterceptor", "Attaching Authorization header")
         }
-
-
 
         return chain.proceed(requestBuilder.build())
     }

@@ -1,0 +1,276 @@
+<?php
+
+namespace App\Http\Controllers\API;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use App\Models\Message;
+use App\Models\User;
+
+class MessageController extends Controller
+{
+    // Helper: deterministic conversation ID for 1:1 (so both users share same conv id)
+    protected function makeConversationId(int $a, int $b): string
+    {
+        [$min, $max] = $a <= $b ? [$a, $b] : [$b, $a];
+        return 'u' . $min . '_u' . $max;
+    }
+
+    // POST /api/messages/send
+    public function store(Request $request)
+    {
+        $user = $request->user(); // authenticated user
+        if (!$user) return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+
+        $validator = Validator::make($request->all(), [
+            'receiverID' => 'required|integer|exists:users_tbl,userID', // users_tbl primary key is userID
+            'message' => 'required|string',
+            'messageType' => 'nullable|in:text,image,file,system',
+            'conversationID' => 'nullable|string|max:128',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $receiverID = (int)$request->input('receiverID');
+        if ($receiverID === $user->userID) {
+            return response()->json(['success' => false, 'message' => 'Cannot send message to yourself'], 400);
+        }
+
+        $conversationID = $request->input('conversationID');
+        if (!$conversationID) {
+            $conversationID = $this->makeConversationId((int)$user->userID, $receiverID);
+        }
+
+        // Optional: verify receiver exists (validator did) and that both users allowed to message
+
+        try {
+            DB::beginTransaction();
+
+            $message = Message::create([
+                'conversationID' => $conversationID,
+                'senderID' => (int)$user->userID,
+                'receiverID' => $receiverID,
+                'message' => $request->input('message'),
+                'messageType' => $request->input('messageType', 'text'),
+                'isRead' => false,
+                'isDeletedBySender' => false,
+                'isDeletedByReceiver' => false,
+            ]);
+
+            DB::commit();
+
+            // debug: confirm stored senderID and user key
+            \Log::debug('MessageController::store created', [
+                'messageID' => $message->messageID ?? null,
+                'senderID' => $message->senderID ?? null,
+                'user_userID' => $user->userID ?? null,
+            ]);
+
+            // Optionally send push/FCM notification to $receiverID here
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Message sent',
+                'data' => $message,
+            ], 201);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Log::error('Message send error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error'], 500);
+        }
+    }
+
+    // GET /api/messages/conversation?conversationID=... OR ?otherUserID=...
+    public function conversation(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+
+        $conversationID = $request->query('conversationID');
+        $otherUserID = $request->query('otherUserID');
+        $limit = min(100, (int)$request->query('limit', 50));
+        $beforeID = (int)$request->query('beforeMessageID', 0);
+
+        // If the client provided otherUserID, compute the canonical conversationID server-side
+        // and ignore any client-supplied conversationID. This prevents malformed conv IDs
+        // (for example containing 0 from earlier bugs) from causing Forbidden responses.
+        if (!empty($otherUserID)) {
+            $conversationID = $this->makeConversationId((int)$user->userID, (int)$otherUserID);
+            \Log::debug('MessageController::conversation computed conversationID from otherUserID', [
+                'computedConversationID' => $conversationID,
+                'user_userID' => $user->userID,
+                'otherUserID' => $otherUserID,
+            ]);
+        } else {
+            if (empty($conversationID)) {
+                return response()->json(['success' => false, 'message' => 'conversationID or otherUserID required'], 400);
+            }
+        }
+
+        // Ensure user is a participant (for 1:1 convID, simple check)
+        [$p1, $p2] = sscanf($conversationID, 'u%d_u%d');
+        if (!($p1 == $user->userID || $p2 == $user->userID)) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        // debug: confirm runtime file & incoming parameters
+        \Log::debug('MessageController::conversation entered', [
+            'file' => __FILE__,
+            'conversationID' => $conversationID,
+            'otherUserID' => $otherUserID,
+            'user_userID' => $user->userID,
+            'limit' => $limit,
+            'beforeID' => $beforeID,
+            'includeDeleted' => $request->query('includeDeleted', 0),
+        ]);
+
+        $query = Message::where('conversationID', $conversationID)
+            // hide messages that were deleted for this user
+            ->where(function ($q) use ($user) {
+                $q->where(function ($q2) use ($user) {
+                    $q2->where('senderID', '!=', $user->userID)
+                       ->where('isDeletedByReceiver', false);
+                })->orWhere(function ($q3) use ($user) {
+                    $q3->where('senderID', $user->userID)
+                       ->where('isDeletedBySender', false);
+                });
+            });
+
+        if ($beforeID > 0) {
+            $query->where('messageID', '<', $beforeID);
+        }
+
+        $messages = $query->orderBy('messageID', 'desc')->limit($limit)->get()->reverse()->values();
+
+        // Mark unread messages (receiver == user) as read (only those returned)
+        $messageIdsToMark = $messages->filter(function ($m) use ($user) {
+            return $m->receiverID === (int)$user->userID && !$m->isRead;
+        })->pluck('messageID')->toArray();
+
+        if (count($messageIdsToMark) > 0) {
+            Message::whereIn('messageID', $messageIdsToMark)
+                ->where('receiverID', (int)$user->userID)
+                ->update(['isRead' => true]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'conversationID' => $conversationID,
+            'messages' => $messages,
+        ]);
+    }
+
+    // GET /api/messages/conversations -> list user's conversations with lastMessage + unreadCount
+    public function conversations(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+
+        // Simpler approach: get latest message per conversation and unread counts
+        // We use raw queries for grouping speed; adapt if needed.
+        $userId = (int)$user->userID;
+
+        $lastMessages = DB::table('messages_tbl as m')
+            ->select('m.conversationID', 'm.messageID', 'm.senderID', 'm.receiverID', 'm.message', 'm.messageType', 'm.isRead', 'm.createdAt')
+            ->where(function ($q) use ($userId) {
+                $q->where('m.senderID', $userId)->orWhere('m.receiverID', $userId);
+            })
+            ->where(function ($q) use ($userId) {
+                // respect soft-delete flags per party
+                $q->where(function ($q2) use ($userId) {
+                    $q2->where('m.senderID', '!=', $userId)
+                       ->where('m.isDeletedByReceiver', false);
+                })->orWhere(function ($q3) use ($userId) {
+                    $q3->where('m.senderID', $userId)
+                       ->where('m.isDeletedBySender', false);
+                });
+            })
+            ->orderBy('m.createdAt', 'desc');
+
+        // Use distinct by conversationID (MySQL trick: group by conversationID and pick MAX)
+        $conversations = DB::table(DB::raw('( ' . $lastMessages->toSql() . ' ) as t'))
+            ->mergeBindings($lastMessages)
+            ->select('conversationID', 'messageID', 'senderID', 'receiverID', 'message', 'messageType', 'isRead', 'createdAt')
+            ->groupBy('conversationID')
+            ->orderBy('createdAt', 'desc')
+            ->get();
+
+        // For each conversation compute partner and unreadCount
+        $result = $conversations->map(function ($c) use ($userId) {
+            $partnerId = ($c->senderID == $userId) ? $c->receiverID : $c->senderID;
+            $unread = DB::table('messages_tbl')
+                ->where('conversationID', $c->conversationID)
+                ->where('receiverID', $userId)
+                ->where('isRead', 0)
+                ->count();
+
+            return [
+                'conversationID' => $c->conversationID,
+                'partnerID' => $partnerId,
+                'lastMessage' => $c->message,
+                'lastMessageAt' => $c->createdAt,
+                'unreadCount' => $unread,
+            ];
+        });
+
+        return response()->json(['success' => true, 'conversations' => $result]);
+    }
+
+    // POST /api/messages/mark_read
+    public function markRead(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+
+        $messageIDs = $request->input('messageIDs', null);
+        $conversationID = $request->input('conversationID', null);
+
+        if (!$messageIDs && !$conversationID) {
+            return response()->json(['success' => false, 'message' => 'messageIDs or conversationID required'], 400);
+        }
+
+        $q = Message::where('receiverID', (int)$user->userID);
+
+        if ($messageIDs) {
+            $ids = array_map('intval', (array)$messageIDs);
+            $q->whereIn('messageID', $ids);
+        } else {
+            $q->where('conversationID', $conversationID);
+        }
+
+        $updated = $q->update(['isRead' => true]);
+
+        return response()->json(['success' => true, 'updated' => $updated]);
+    }
+
+    // DELETE /api/messages/{id} -> soft delete for caller
+    public function destroy(Request $request, $id)
+    {
+        $user = $request->user();
+        if (!$user) return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+
+        $message = Message::find($id);
+        if (!$message) return response()->json(['success' => false, 'message' => 'Not found'], 404);
+
+        if ($message->senderID == $user->userID) {
+            $message->isDeletedBySender = true;
+        } elseif ($message->receiverID == $user->userID) {
+            $message->isDeletedByReceiver = true;
+        } else {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        // If both deleted, remove permanently (or you can choose to keep for audit)
+        if ($message->isDeletedBySender && $message->isDeletedByReceiver) {
+            $message->delete();
+            return response()->json(['success' => true, 'message' => 'Message permanently deleted']);
+        }
+
+        $message->save();
+        return response()->json(['success' => true, 'message' => 'Message deleted for you']);
+    }
+}

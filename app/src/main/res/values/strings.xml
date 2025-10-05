@@ -63,6 +63,7 @@
     <string name="nav_history">History</string>
     <string name="nav_profile">Profile</string>
     <string name="nav_logout">Logout</string>
+    <string name="nav_messages">Messages</string>
 
     <string name="profile_title">Profile</string>
     <string name="hint_first_name">First name</string>
@@ -110,4 +111,18 @@
 
     <!-- Add title string used in owner fragment -->
     <string name="title_track">Update Status</string>
+
+    <string name="partner_name">Partner Name</string>
+
+    <!-- Added for chat fragment -->
+    <string name="copy_debug">Copy</string>
+    <string name="hint_type_message">Type a message</string>
+    <string name="send">Send</string>
+    <!-- Debug UI strings -->
+    <string name="waiting_debug">Waiting for debug output...</string>
+    <string name="messages_label">Messages:\n</string>
+    <string name="show_debug">Show debug</string>
+    <string name="hide_debug">Hide debug</string>
+    <string name="requesting_conversation_id">Requesting conversationID=%1$s for user=%2$d</string>
+    <string name="requesting_conversation_other">Requesting conversation with otherUserID=%1$d for user=%2$d</string>
 </resources>
