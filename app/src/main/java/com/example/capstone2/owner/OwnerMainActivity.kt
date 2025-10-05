@@ -83,7 +83,7 @@ class OwnerMainActivity : AppCompatActivity() {
                 R.id.request -> setCurrentFragment(fragmentrequest)
                 R.id.track -> setCurrentFragment(fragmenttrack)
                 R.id.messages -> setCurrentFragmentWithBadgeClear(fragmentmessages)
-                R.id.profile -> setCurrentFragment(OwnerFragmentProfile())
+                R.id.transaction_history -> setCurrentFragment(fragmenthistory)
             }
             true
         }
