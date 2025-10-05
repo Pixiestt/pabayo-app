@@ -17,9 +17,9 @@ import com.example.capstone2.adapter.ChatAdapter
 import com.example.capstone2.repository.SharedPrefManager
 import com.example.capstone2.viewmodel.ChatViewModel
 import com.example.capstone2.viewmodel.ChatViewModelFactory
+import android.util.Log
 
 class ChatFragment : Fragment() {
-
     private lateinit var rvMessages: RecyclerView
     private lateinit var etMessage: EditText
     private lateinit var btnSend: ImageButton
@@ -86,10 +86,87 @@ class ChatFragment : Fragment() {
                 }
                 if (inferredName != null) msg.copy(senderName = inferredName) else msg
             }
-            adapter.submitList(enriched)
-            rvMessages.visibility = View.VISIBLE
+            // Robust ordering: prefer sorting by parsed timestamps when there are multiple parseable times.
+            fun parseTimeToMillis(t: String?): Long? {
+                if (t == null) return null
+                try { val asLong = t.toLongOrNull(); if (asLong != null) return if (asLong < 1000000000000L) asLong * 1000L else asLong } catch (_: Exception) {}
+                try { return java.time.Instant.parse(t).toEpochMilli() } catch (_: Exception) {}
+                try {
+                    val fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                    val ldt = java.time.LocalDateTime.parse(t, fmt)
+                    return ldt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                } catch (_: Exception) {}
+                return null
+            }
+
+            val parsedList = enriched.map { it to try { parseTimeToMillis(it.timestamp) } catch (_: Exception) { null } }
+            val parsedCount = parsedList.count { it.second != null }
+            val sorted = when {
+                parsedCount >= 2 -> {
+                    // Sort by time ascending (oldest first)
+                    parsedList.sortedBy { it.second ?: Long.MIN_VALUE }.map { it.first }
+                }
+                else -> {
+                    // Not enough parseable times: apply heuristics on raw timestamp strings.
+                    val rawTimestamps = enriched.mapNotNull { it.timestamp }
+                    fun isLikelyIso(ts: String?): Boolean {
+                        if (ts == null) return false
+                        return ts.length >= 16 && ts[4] == '-' && ts[7] == '-' && ts[10] == ' '
+                    }
+
+                    // If first and last raw timestamps look like the common yyyy-MM-dd HH:mm:ss format, compare lexicographically.
+                    val firstRaw = enriched.firstOrNull()?.timestamp
+                    val lastRaw = enriched.lastOrNull()?.timestamp
+                    val lexReverse = if (firstRaw != null && lastRaw != null && isLikelyIso(firstRaw) && isLikelyIso(lastRaw)) {
+                        firstRaw > lastRaw
+                    } else {
+                        // Fallback heuristic: sample pairs across the list and count decreasing pairs (newest-first). If majority decreasing, reverse.
+                        var dec = 0; var inc = 0
+                        val sample = rawTimestamps.take(6)
+                        for (i in 0 until sample.size - 1) {
+                            val a = sample[i]; val b = sample[i+1]
+                            if (a > b) dec++ else if (a < b) inc++
+                        }
+                        dec > inc && dec > 0
+                    }
+
+                    if (lexReverse) {
+                        if (Log.isLoggable(TAG, Log.DEBUG)) Log.d(TAG, "Heuristic: reversing list because timestamps appear newest-first")
+                        enriched.reversed()
+                    } else enriched
+                }
+            }
+            adapter.submitList(sorted)
+            // Broadcast the newest message preview so the Conversations list can update its preview if needed
+             try {
+                 val lastMsg = sorted.lastOrNull()
+                 if (lastMsg != null) {
+                     // Determine partner id in case fragment was opened by conversationID (otherUserId may be -1)
+                     val partnerIdToSave = try {
+                         if (otherUserId != -1L) otherUserId
+                         else {
+                             val sid = lastMsg.senderID ?: -1L
+                             val rid = lastMsg.receiverID ?: -1L
+                             if (sid == currentUserId) rid else sid
+                         }
+                     } catch (_: Exception) { otherUserId }
+
+                     // Persist preview for offline/slow-server situations
+                     try {
+                         com.example.capstone2.repository.SharedPrefManager.saveConversationPreview(requireContext(), partnerIdToSave, lastMsg.conversationID, lastMsg.message, lastMsg.timestamp)
+                     } catch (_: Exception) {}
+
+                     val itPreview = android.content.Intent("com.example.capstone2.NEW_MESSAGE_PREVIEW")
+                     itPreview.putExtra("partnerID", partnerIdToSave)
+                     itPreview.putExtra("conversationID", lastMsg.conversationID)
+                     itPreview.putExtra("lastMessage", lastMsg.message)
+                     itPreview.putExtra("lastMessageAt", lastMsg.timestamp)
+                     requireActivity().sendBroadcast(itPreview)
+                 }
+             } catch (_: Exception) {}
+             rvMessages.visibility = View.VISIBLE
             try { rvMessages.bringToFront() } catch (_: Exception) {}
-            rvMessages.post { if (enriched.isNotEmpty()) try { rvMessages.scrollToPosition(enriched.size - 1) } catch (_: Exception) {} }
+            rvMessages.post { if (sorted.isNotEmpty()) try { rvMessages.scrollToPosition(sorted.size - 1) } catch (_: Exception) {} }
         }
 
         viewModel.error.observe(viewLifecycleOwner) { err -> err?.let { Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show() } }
@@ -117,6 +194,7 @@ class ChatFragment : Fragment() {
     }
 
     companion object {
+        private const val TAG = "ChatFragment"
         @JvmStatic
         fun newInstance(otherUserID: Long, conversationID: String? = null, otherName: String? = null) = ChatFragment().apply {
             arguments = Bundle().apply {

@@ -23,21 +23,19 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
     private val _error = MutableLiveData<String?>(null)
     val error: LiveData<String?> = _error
 
-    // New: debug LiveData to show last request/response in UI when adb isn't available
-    private val _debug = MutableLiveData<String?>(null)
-    val debug: LiveData<String?> = _debug
-
     fun loadConversation(conversationID: String? = null, otherUserID: Long? = null) {
         viewModelScope.launch {
             try {
                 val resp = apiService.getConversation(conversationID = conversationID, otherUserID = otherUserID)
 
-                // Read both body and errorBody (reading them may consume them) and post debug immediately
+                // Read both body and errorBody (reading them may consume them)
                 val responseBodyStr = try { resp.body()?.string() } catch (e: Exception) { null }
                 val responseErrStr = try { resp.errorBody()?.string() } catch (e: Exception) { null }
                 val respBodyShort = responseBodyStr ?: "<empty>"
                 val respErrShort = responseErrStr ?: "<none>"
-                _debug.postValue("Conversation HTTP ${resp.code()}: body=$respBodyShort err=$respErrShort")
+                if (Log.isLoggable(TAG, Log.DEBUG)) {
+                    Log.d(TAG, "getConversation raw response: ${responseBodyStr?.take(4000)}")
+                }
 
                 if (!resp.isSuccessful) {
                     _error.postValue("Failed to load conversation: ${resp.code()}")
@@ -49,7 +47,6 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                 if (Log.isLoggable(TAG, Log.DEBUG)) {
                     Log.d(TAG, "getConversation raw response: ${bodyStr?.take(4000)}")
                 }
-                _debug.postValue("Conversation response (userId=$currentUserId):\n$bodyShort")
 
                 if (bodyStr.isNullOrBlank()) {
                     _messages.postValue(emptyList())
@@ -105,14 +102,15 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                         }
                     }
 
+                    // Helpers to extract string/long candidates from a JSON object
                     fun getStringFromObj(obj: com.google.gson.JsonObject, candidates: List<String>): String? {
                         for (k in candidates) {
                             if (obj.has(k) && !obj.get(k).isJsonNull) {
-                                val v = try { obj.get(k) } catch (e: Exception) { null }
-                                if (v != null) {
+                                try {
+                                    val v = obj.get(k)
                                     val s = v.asSafeString()
                                     if (!s.isNullOrBlank()) return s
-                                }
+                                } catch (_: Exception) { }
                             }
                         }
                         return null
@@ -121,13 +119,29 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                     fun getLongFromObj(obj: com.google.gson.JsonObject, candidates: List<String>): Long? {
                         for (k in candidates) {
                             if (obj.has(k) && !obj.get(k).isJsonNull) {
-                                val v = try { obj.get(k) } catch (e: Exception) { null }
-                                if (v != null) {
+                                try {
+                                    val v = obj.get(k)
                                     val l = v.asSafeLong()
                                     if (l != null) return l
-                                }
+                                } catch (_: Exception) { }
                             }
                         }
+                        return null
+                    }
+
+                    // Helper: parse timestamp string to epoch millis (tries plain long, ISO instant, and common formats)
+                    fun parseTimeToMillis(t: String?): Long? {
+                        if (t == null) return null
+                        try {
+                            val asLong = t.toLongOrNull()
+                            if (asLong != null) return if (asLong < 1000000000000L) asLong * 1000L else asLong
+                        } catch (_: Exception) { }
+                        try { return java.time.Instant.parse(t).toEpochMilli() } catch (_: Exception) { }
+                        try {
+                            val fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                            val ldt = java.time.LocalDateTime.parse(t, fmt)
+                            return ldt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        } catch (_: Exception) { }
                         return null
                     }
 
@@ -176,6 +190,11 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                             }
                         }
 
+                        // Sort messages oldest-first (so newest is last) by parsed timestamp when possible
+                        try {
+                            built.sortBy { parseTimeToMillis(it.timestamp) ?: Long.MAX_VALUE }
+                        } catch (_: Exception) { }
+
                         _messages.postValue(built)
                         return@launch
                     }
@@ -196,7 +215,10 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                     try {
                         val messagesArray = try { gson.fromJson(bodyStr, Array<Message>::class.java) } catch (e: Exception) { null }
                         if (messagesArray != null) {
-                            _messages.postValue(messagesArray.toList())
+                            // Ensure oldest-first ordering
+                            val list = messagesArray.toMutableList()
+                            try { list.sortBy { parseTimeToMillis(it.timestamp) ?: Long.MAX_VALUE } } catch (_: Exception) {}
+                            _messages.postValue(list)
                             return@launch
                         }
                     } catch (e: Exception) {
@@ -237,7 +259,6 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                     if (Log.isLoggable(TAG, Log.DEBUG)) {
                         Log.d(TAG, "sendMessage request JSON: $outJson")
                     }
-                    _debug.postValue("Outgoing request:\n$outJson")
                 } catch (e: Exception) {}
 
                 // Primary send
@@ -275,17 +296,14 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                                  val current = _messages.value?.toMutableList() ?: mutableListOf()
                                  current.add(parsedMessage)
                                  _messages.postValue(current)
-                                 _debug.postValue("Sent OK. Created message id=${parsedMessage.id}")
                                  // refresh authoritative state
                                  loadConversation(conversationID = conversationID, otherUserID = receiverID)
                              } else {
                                  // fallback: refresh conversation to pull the message
-                                 _debug.postValue((_debug.value ?: "") + "\nWarning: couldn't parse created message from server response")
                                  loadConversation(conversationID = conversationID, otherUserID = receiverID)
                              }
                          } catch (e: Exception) {
                             Log.e(TAG, "Failed to parse sendMessage response: " + (e.message ?: "<null>"))
-                             _debug.postValue((_debug.value ?: "") + "\nFailed to parse send response: " + (e.message ?: ""))
                              loadConversation(conversationID = conversationID, otherUserID = receiverID)
                          }
                      } else {
@@ -296,8 +314,6 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                      // Non-successful primary response
                      val errBody = try { resp.errorBody()?.string() } catch (e: Exception) { null }
                      Log.e(TAG, "sendMessage failed with HTTP ${resp.code()} body=${errBody}")
-                     val errShort = errBody ?: "<no body>"
-                     _debug.postValue("Server error: HTTP ${resp.code()}\n$errShort")
 
                      if (resp.code() == 422) {
                          // validation: try a raw retry with camelCase keys
@@ -306,7 +322,6 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                         if (Log.isLoggable(TAG, Log.DEBUG)) {
                              Log.d(TAG, "Attempting raw send retry with body: $rawMap")
                          }
-                         _debug.postValue((_debug.value ?: "") + "\nRetrying with raw body: $rawMap")
 
                          try {
                              val retryResp = apiService.sendMessageRaw(rawMap)
@@ -315,7 +330,6 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                                 if (Log.isLoggable(TAG, Log.DEBUG)) {
                                     Log.d(TAG, "retry raw response: ${bodyStr?.take(2000)}")
                                 }
-                                 _debug.postValue((_debug.value ?: "") + "\nRetry response: " + (bodyStr ?: "<empty>"))
 
                                  if (!bodyStr.isNullOrBlank()) {
                                      try {
@@ -338,7 +352,6 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                                              val current = _messages.value?.toMutableList() ?: mutableListOf()
                                              current.add(maybe)
                                              _messages.postValue(current)
-                                             _debug.postValue((_debug.value ?: "") + "\nRetry parsed message id=${maybe.id}")
                                              loadConversation(conversationID = conversationID, otherUserID = receiverID)
                                              return@launch
                                          } else {
@@ -368,14 +381,11 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
                                      }
                                  }
                                  _error.postValue(userVisible)
-                                 val retryErrShort = retryErr ?: "<no body>"
-                                 _debug.postValue((_debug.value ?: "") + "\nRetry failed: $retryErrShort")
                                  return@launch
                              }
                          } catch (e: Exception) {
                             Log.e(TAG, "raw retry exception: " + (e.message ?: "<null>"))
                              _error.postValue(errBody ?: e.message ?: "Failed to send message")
-                             _debug.postValue((_debug.value ?: "") + "\nRetry exception: " + (e.message ?: ""))
                              return@launch
                          }
                      } else {
@@ -387,7 +397,6 @@ class ChatViewModel(private val apiService: ApiService, private val currentUserI
              } catch (e: Exception) {
                 Log.e(TAG, "sendMessage exception: " + (e.message ?: "<null>"))
                  _error.postValue(e.message)
-                 _debug.postValue((_debug.value ?: "") + "\nException: " + (e.message ?: ""))
              }
          }
      }

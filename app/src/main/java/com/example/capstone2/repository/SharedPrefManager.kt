@@ -88,4 +88,39 @@ object SharedPrefManager {
         val p = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         p.edit().putBoolean(KEY_DEBUG_PANEL_VISIBLE, enabled).apply()
     }
+
+    // --- Conversation preview cache helpers (local optimistic UI) ---
+    data class ConversationPreview(val conversationID: String?, val lastMessage: String?, val lastMessageAt: String?)
+
+    private fun keyConv(partnerId: Long) = "preview_conv_${partnerId}"
+    private fun keyMsg(partnerId: Long) = "preview_msg_${partnerId}"
+    private fun keyAt(partnerId: Long) = "preview_at_${partnerId}"
+
+    fun saveConversationPreview(ctx: Context, partnerId: Long, conversationID: String?, lastMessage: String?, lastMessageAt: String?) {
+        try {
+            val p = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val e = p.edit()
+            if (conversationID == null) e.remove(keyConv(partnerId)) else e.putString(keyConv(partnerId), conversationID)
+            if (lastMessage == null) e.remove(keyMsg(partnerId)) else e.putString(keyMsg(partnerId), lastMessage)
+            if (lastMessageAt == null) e.remove(keyAt(partnerId)) else e.putString(keyAt(partnerId), lastMessageAt)
+            e.apply()
+        } catch (_: Exception) { }
+    }
+
+    fun getConversationPreview(ctx: Context, partnerId: Long): ConversationPreview? {
+        return try {
+            val p = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val conv = p.getString(keyConv(partnerId), null)
+            val msg = p.getString(keyMsg(partnerId), null)
+            val at = p.getString(keyAt(partnerId), null)
+            if (conv == null && msg == null && at == null) null else ConversationPreview(conv, msg, at)
+        } catch (_: Exception) { null }
+    }
+
+    fun clearConversationPreview(ctx: Context, partnerId: Long) {
+        try {
+            val p = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            p.edit().remove(keyConv(partnerId)).remove(keyMsg(partnerId)).remove(keyAt(partnerId)).apply()
+        } catch (_: Exception) { }
+    }
 }

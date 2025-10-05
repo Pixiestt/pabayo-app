@@ -45,13 +45,7 @@ class RequestRepository(private val apiService: ApiService) {
             if (response.isSuccessful) {
                 Log.d("RequestRepository", "Successfully fetched ${response.body()?.requests?.size ?: 0} owner requests")
                 // Cache raw JSON of the parsed object for later fallback
-                try {
-                    val gson = Gson()
-                    val raw = gson.toJson(response.body())
-                    ownerRequestsCache = raw
-                } catch (ignore: Exception) {
-                    Log.w("RequestRepository", "Failed to cache owner requests response", ignore)
-                }
+                // (debug) auto-save disabled — no longer serializing/caching response JSON
             } else {
                 Log.e("RequestRepository", "Failed to fetch owner requests: ${response.code()}")
             }
@@ -76,14 +70,12 @@ class RequestRepository(private val apiService: ApiService) {
                     else -> tryFixJsonObject(trimmed)
                 }
 
-                val gson = Gson()
                 val reader = JsonReader(StringReader(fixed))
                 reader.isLenient = true
-                val parsed: RequestResponse = gson.fromJson(reader, RequestResponse::class.java)
+                val parsed: RequestResponse = Gson().fromJson(reader, RequestResponse::class.java)
                 Log.d("RequestRepository", "Parsed ${parsed.requests.size} owner requests from raw fallback")
 
-                // Cache the fixed raw JSON string for future fallback
-                ownerRequestsCache = fixed
+                // (debug) previously we saved `fixed` to `ownerRequestsCache` for debugging; disabled now
 
                 return Response.success(parsed)
             } else {
@@ -145,8 +137,7 @@ class RequestRepository(private val apiService: ApiService) {
                         Log.d("RequestRepository", "Received ${requests.size} requests")
                         // Cache raw JSON for later fallback
                         try {
-                            val raw = gson.toJson(requests)
-                            companionApplyCache(customerID, raw)
+                            // (debug) auto-save disabled — no longer serializing/caching requests
                         } catch (ignore: Exception) {
                             Log.w("RequestRepository", "Failed to cache response", ignore)
                         }
@@ -192,7 +183,7 @@ class RequestRepository(private val apiService: ApiService) {
                 Log.d("RequestRepository", "Parsed ${parsed.size} requests from raw fallback")
                 // cache raw string
                 try {
-                    companionApplyCache(customerID, fixed)
+                    // (debug) auto-save disabled — no longer caching fixed raw fallback
                 } catch (_: Exception) {}
                 return Response.success(parsed)
             } else {
@@ -223,14 +214,6 @@ class RequestRepository(private val apiService: ApiService) {
         throw Exception("Failed to fetch customer requests and no cache available")
     }
 
-    private fun companionApplyCache(customerID: Long, rawJson: String) {
-        try {
-            customerRequestsCache[customerID] = rawJson
-        } catch (_: Exception) {
-            // ignore caching failures
-        }
-    }
-
     /**
      * Try to recover from truncated/malformed JSON arrays by simple heuristics:
      * - Trim surrounding whitespace
@@ -247,7 +230,7 @@ class RequestRepository(private val apiService: ApiService) {
         }
         // Remove trailing commas before a closing bracket: ", ]" -> "]"
         // Use a properly escaped regex string: match comma + optional whitespace + closing bracket
-        s = s.replace(Regex(",\\s*]"), "]")
+        s = s.replace(Regex(",\\s*" + java.util.regex.Pattern.quote("]")), "]")
         return s
     }
 
@@ -262,7 +245,7 @@ class RequestRepository(private val apiService: ApiService) {
         // Add a closing brace if missing
         if (!s.endsWith("}")) s = s + "}"
         // Remove trailing commas before a closing brace
-        s = s.replace(Regex(",\\s*}"), "}")
+        s = s.replace(Regex(",\\s*" + java.util.regex.Pattern.quote("}")), "}")
         // If the top-level does not contain "requests" but contains an array field, try to find it
         if (!s.contains("\"requests\"")) {
             // Best-effort: if it contains a top-level field whose value is an array, wrap it
