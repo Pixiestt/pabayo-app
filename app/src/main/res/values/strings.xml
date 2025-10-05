@@ -125,4 +125,9 @@
     <string name="hide_debug">Hide debug</string>
     <string name="requesting_conversation_id">Requesting conversationID=%1$s for user=%2$d</string>
     <string name="requesting_conversation_other">Requesting conversation with otherUserID=%1$d for user=%2$d</string>
+    <string name="use_signup_address">Use my signup address</string>
+    <string name="label_pickup_date">Pickup Date</string>
+    <string name="hint_pickup_date">Select pickup date</string>
+    <string name="next">Next</string>
+    <string name="bg_rice_field">Rice field background</string>
 </resources>

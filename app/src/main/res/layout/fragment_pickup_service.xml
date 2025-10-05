@@ -141,15 +141,26 @@
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:background="@drawable/edit_text_background"
-                    android:hint="123 Main St. Anytown"
+                    android:hint="@string/hint_address"
+                    android:inputType="textPostalAddress"
+                    android:autofillHints="postalAddress"
                     android:padding="16dp"
                     android:textSize="16sp" />
+
+                <!-- Use signup address checkbox -->
+                <CheckBox
+                    android:id="@+id/cbUseSignupAddress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/use_signup_address"
+                    android:textSize="14sp" />
 
                 <!-- Pickup Date Input -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Pickup Date"
+                    android:text="@string/label_pickup_date"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginTop="24dp"
@@ -160,7 +171,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:background="@drawable/edit_text_background"
-                    android:hint="Select pickup date"
+                    android:hint="@string/hint_pickup_date"
+                    android:inputType="date"
+                    android:autofillHints="postalAddress"
                     android:padding="16dp"
                     android:textSize="16sp"
                     android:focusable="false"
@@ -180,7 +193,7 @@
         android:layout_height="56dp"
         android:layout_margin="24dp"
         android:background="@drawable/button_primary"
-        android:text="Next"
+        android:text="@string/next"
         android:textColor="@color/white"
         android:textSize="16sp"
         android:textStyle="bold"

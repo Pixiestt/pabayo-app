@@ -11,6 +11,7 @@
         android:layout_height="0dp"
         android:scaleType="centerCrop"
         android:src="@drawable/rice_field_background"
+        android:contentDescription="@string/bg_rice_field"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
 
@@ -163,9 +164,20 @@
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
                         android:background="@drawable/edit_text_background"
-                        android:hint="Enter your delivery address"
+                        android:hint="@string/hint_address"
+                        android:inputType="textPostalAddress"
+                        android:autofillHints="postalAddress"
                         android:padding="16dp"
                         android:textSize="16sp" />
+
+                    <!-- Use signup address checkbox -->
+                    <CheckBox
+                        android:id="@+id/cbUseSignupAddress"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/use_signup_address"
+                        android:textSize="14sp" />
 
                 </LinearLayout>
 
@@ -182,7 +194,7 @@
         android:layout_height="56dp"
         android:layout_margin="24dp"
         android:background="@drawable/button_primary"
-        android:text="Next"
+        android:text="@string/next"
         android:textColor="@color/white"
         android:textSize="16sp"
         android:textStyle="bold"
