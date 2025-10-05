@@ -147,7 +147,8 @@ class MessagesFragment : Fragment() {
                         if (outDir != null && !bodyStr.isNullOrBlank()) {
                             val outFile = File(outDir, "conversations_raw_${System.currentTimeMillis()}.json")
                             outFile.writeText(bodyStr)
-                            Toast.makeText(requireContext(), "Saved conversations JSON to: ${outFile.absolutePath}", Toast.LENGTH_LONG).show()
+                            // (debug) disabled: previously saved raw conversations JSON to external files for debugging
+                            // Keeping try/catch structure omitted to avoid changing behavior; no file writes performed now.
                         }
                     } catch (e: Exception) {
                         if (Log.isLoggable(TAG, Log.WARN)) Log.w(TAG, "failed to write conversations file", e)
