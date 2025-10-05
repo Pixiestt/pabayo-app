@@ -17,68 +17,19 @@
         android:gravity="center_vertical"
         android:visibility="gone" />
 
-    <androidx.appcompat.widget.SwitchCompat
-        android:id="@+id/switchDebugToggle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_margin="8dp"
-        android:text="Debug"
-        android:contentDescription="Toggle debug panel" />
-
-    <!-- Debug panel (hidden by default) placed below the title and above the messages -->
-    <LinearLayout
-        android:id="@+id/debugPanel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:visibility="gone"
-        android:background="#FFF59D"
-        android:padding="8dp"
-        android:elevation="8dp"
-        android:layout_below="@id/tvChatTitle">
-
-        <ScrollView
-            android:id="@+id/scrollDebug"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:fillViewport="true"
-            android:layout_marginEnd="8dp">
-
-            <TextView
-                android:id="@+id/tvDebug"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="120dp"
-                android:textColor="#B71C1C"
-                android:gravity="start"
-                android:textSize="12sp"
-                android:padding="4dp" />
-        </ScrollView>
-
-        <Button
-            android:id="@+id/btnCopyDebug"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/copy_debug"
-            android:layout_gravity="center" />
-
-    </LinearLayout>
-
-    <!-- Messages list fills fragment; put input inside fragment so it's always visible -->
+    <!-- Messages list fills fragment; put input inside fragment so it appears only in chat -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvMessages"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="8dp"
-        android:paddingBottom="120dp"
+        android:paddingBottom="96dp"
         android:clipToPadding="false"
         android:layout_alignParentTop="true"
-        android:layout_below="@id/switchDebugToggle"
+        android:layout_below="@id/tvChatTitle"
         android:layout_above="@+id/layoutInput" />
 
-    <!-- Re-added input bar inside the fragment so it is visible without requiring activity layout updates -->
+    <!-- Input bar inside the fragment (styled to app colors, not debug yellow) -->
     <LinearLayout
         android:id="@+id/layoutInput"
         android:layout_width="match_parent"
@@ -86,9 +37,8 @@
         android:layout_alignParentBottom="true"
         android:orientation="horizontal"
         android:padding="8dp"
-        android:background="#FFEB3B"
-        android:elevation="12dp"
-        android:translationZ="16dp"
+        android:background="@color/card_background"
+        android:elevation="4dp"
         android:minHeight="56dp">
 
         <EditText
@@ -100,7 +50,9 @@
             android:textSize="16sp"
             android:padding="8dp"
             android:inputType="textMultiLine"
-            android:background="@drawable/edit_text_background" />
+            android:background="@drawable/edit_text_background"
+            android:importantForAutofill="no"
+            android:autofillHints="none" />
 
         <ImageButton
             android:id="@+id/btnSend"
