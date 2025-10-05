@@ -10,6 +10,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 class OwnerFragmentHome : Fragment(R.layout.owner_fragment_home) {
     
     private lateinit var btnViewRequests: Button
+    private lateinit var btnViewMessages: Button
     private lateinit var btnUpdateStatus: Button
     private lateinit var btnViewHistory: Button
     private lateinit var bottomNavigationView: BottomNavigationView
@@ -22,10 +23,17 @@ class OwnerFragmentHome : Fragment(R.layout.owner_fragment_home) {
         bottomNavigationView.visibility = View.GONE
         
         // Find button views
+        btnViewMessages = view.findViewById(R.id.btnViewMessages)
         btnViewRequests = view.findViewById(R.id.btnViewRequests)
         btnUpdateStatus = view.findViewById(R.id.btnUpdateStatus)
         btnViewHistory = view.findViewById(R.id.btnViewHistory)
         
+        // Navigate to Messages when pressed
+        btnViewMessages.setOnClickListener {
+            // Ask the activity to show the MessagesFragment
+            (activity as? OwnerMainActivity)?.openMessages()
+        }
+
         // Set button click listeners
         btnViewRequests.setOnClickListener {
             navigateToRequests()

@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
@@ -18,6 +19,7 @@ import com.example.capstone2.messages.MessagesFragment
 import com.example.capstone2.util.NotificationUtils
 import com.example.capstone2.util.PermissionUtils
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import android.widget.TextView
 
 
 class OwnerMainActivity : AppCompatActivity() {
@@ -29,7 +31,7 @@ class OwnerMainActivity : AppCompatActivity() {
     private lateinit var fragmentrequest: OwnerFragmentRequest
     private lateinit var fragmenttrack: OwnerFragmentTrack
     private lateinit var fragmenthistory: OwnerFragmentHistory
-    private lateinit var fragmentmessages: com.example.capstone2.messages.MessagesFragment
+    private lateinit var fragmentmessages: MessagesFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,7 +57,7 @@ class OwnerMainActivity : AppCompatActivity() {
         fragmentrequest = OwnerFragmentRequest()
         fragmenttrack = OwnerFragmentTrack()
         fragmenthistory = OwnerFragmentHistory()
-        fragmentmessages = com.example.capstone2.messages.MessagesFragment()
+        fragmentmessages = MessagesFragment()
 
         setCurrentFragment(fragmenthome)
 
@@ -80,11 +82,15 @@ class OwnerMainActivity : AppCompatActivity() {
                 R.id.home -> setCurrentFragment(fragmenthome)
                 R.id.request -> setCurrentFragment(fragmentrequest)
                 R.id.track -> setCurrentFragment(fragmenttrack)
-                R.id.messages -> setCurrentFragment(fragmentmessages)
-                R.id.profile -> setCurrentFragment(com.example.capstone2.owner.OwnerFragmentProfile())
+                R.id.messages -> setCurrentFragmentWithBadgeClear(fragmentmessages)
+                R.id.profile -> setCurrentFragment(OwnerFragmentProfile())
             }
             true
         }
+
+        // Restore persisted unread count and update UI if necessary
+        val savedCount = getSharedPreferences("MyAppPrefs", MODE_PRIVATE).getInt("unread_messages_count", 0)
+        setMessagesUnreadCount(savedCount)
     }
 
     // Expose a method so child fragments can open history directly
@@ -92,6 +98,32 @@ class OwnerMainActivity : AppCompatActivity() {
         setCurrentFragment(fragmenthistory)
     }
 
+    // Expose a method so child fragments can open messages directly and clear unread badge
+    fun openMessages() {
+        val messagesFragment = MessagesFragment()
+        setCurrentFragmentWithBadgeClear(messagesFragment)
+    }
+
+    // Set unread messages count (updates fragment badge if present and persists count)
+    fun setMessagesUnreadCount(count: Int) {
+        try {
+            // persist
+            getSharedPreferences("MyAppPrefs", MODE_PRIVATE).edit { putInt("unread_messages_count", count) }
+            // update currently displayed fragment view if it contains the badge
+            val frag = supportFragmentManager.findFragmentById(R.id.flFragment)
+            val badge = frag?.view?.findViewById<TextView?>(R.id.tvMessagesBadge)
+            badge?.let { b ->
+                if (count > 0) {
+                    b.visibility = View.VISIBLE
+                    b.text = if (count > 99) "99+" else count.toString()
+                } else {
+                    b.visibility = View.GONE
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun getMessagesUnreadCount(): Int = try { getSharedPreferences("MyAppPrefs", MODE_PRIVATE).getInt("unread_messages_count", 0) } catch (_: Exception) { 0 }
     override fun onRequestPermissionsResult(
         requestCode: Int, 
         permissions: Array<out String>, 
@@ -132,7 +164,11 @@ class OwnerMainActivity : AppCompatActivity() {
     // Clear stored auth and navigate to LoginActivity
     private fun performLogout() {
         val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
-        sharedPref.edit().remove("auth_token").remove("userID").apply()
+        // Use KTX edit extension for clarity
+        sharedPref.edit {
+            remove("auth_token")
+            remove("userID")
+        }
 
         val intent = Intent(this, com.example.capstone2.authentication.LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -145,4 +181,13 @@ class OwnerMainActivity : AppCompatActivity() {
             replace(R.id.flFragment, fragment)
             commit()
         }
+    // Override helper to clear unread badge when MessagesFragment is shown
+    private fun setCurrentFragmentWithBadgeClear(fragment: Fragment) {
+        setCurrentFragment(fragment)
+        try {
+            if (fragment is com.example.capstone2.messages.MessagesFragment) {
+                setMessagesUnreadCount(0)
+            }
+        } catch (_: Exception) {}
+    }
 }

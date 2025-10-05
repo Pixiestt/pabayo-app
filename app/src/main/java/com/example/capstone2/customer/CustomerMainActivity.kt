@@ -3,6 +3,7 @@ package com.example.capstone2.customer
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
@@ -19,7 +20,8 @@ import com.example.capstone2.util.PermissionUtils
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationView
 import android.view.View
-import androidx.activity.OnBackPressedCallback
+import android.widget.TextView
+import android.view.MenuItem
 import androidx.core.content.edit
 
 class CustomerMainActivity : AppCompatActivity() {
@@ -27,7 +29,8 @@ class CustomerMainActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var bottomNavigationView: BottomNavigationView
-    
+    private var messagesBadgeView: TextView? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -90,12 +93,28 @@ class CustomerMainActivity : AppCompatActivity() {
         
         // Setup navigation drawer
         val navigationView = findViewById<NavigationView>(R.id.nav_view)
+        // Attach a badge action view to the Messages drawer item so we can show unread counts
+        try {
+            val menu = navigationView.menu
+            val messagesItem = menu.findItem(R.id.messages)
+            messagesItem.setActionView(R.layout.menu_item_badge)
+            val actionView = messagesItem.actionView
+            messagesBadgeView = actionView?.findViewById(R.id.tvMenuBadge)
+            // initialize from persisted preference
+            val saved = getSharedPreferences("MyAppPrefs", MODE_PRIVATE).getInt("unread_messages_count", 0)
+            setMessagesUnreadCount(saved)
+        } catch (_: Exception) {}
         navigationView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.home -> setCurrentFragment(fragmenthome)
                 R.id.request -> setCurrentFragment(fragmentrequest)
                 R.id.track -> setCurrentFragment(fragmenttrack)
                 R.id.history -> setCurrentFragment(fragmenthistory)
+                R.id.messages -> {
+                    setCurrentFragment(fragmentmessages)
+                    // clear unread badge when user opens Messages
+                    setMessagesUnreadCount(0)
+                }
                 R.id.profile -> setCurrentFragment(fragmentprofile)
                 R.id.logout -> {
                     // show confirmation dialog instead of immediate logout
@@ -114,7 +133,10 @@ class CustomerMainActivity : AppCompatActivity() {
                 R.id.track -> setCurrentFragment(fragmenttrack)
                 R.id.history -> setCurrentFragment(fragmenthistory)
                 R.id.profile -> setCurrentFragment(fragmentprofile)
-                R.id.messages -> setCurrentFragment(fragmentmessages)
+                R.id.messages -> {
+                    setCurrentFragment(fragmentmessages)
+                    setMessagesUnreadCount(0)
+                }
                 else -> {
                     // no-op for unknown items
                 }
@@ -137,6 +159,28 @@ class CustomerMainActivity : AppCompatActivity() {
             replace(R.id.flFragment, fragment)
             commit()
         }
+
+    // Public API to update unread messages count (persists and updates badge)
+    fun setMessagesUnreadCount(count: Int) {
+        try {
+            getSharedPreferences("MyAppPrefs", MODE_PRIVATE).edit { putInt("unread_messages_count", count) }
+            // Owner activity may also read this value; update local drawer badge view
+            runOnUiThread {
+                try {
+                    messagesBadgeView?.let { b ->
+                        if (count > 0) {
+                            b.visibility = View.VISIBLE
+                            b.text = if (count > 99) "99+" else count.toString()
+                        } else {
+                            b.visibility = View.GONE
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun getMessagesUnreadCount(): Int = try { getSharedPreferences("MyAppPrefs", MODE_PRIVATE).getInt("unread_messages_count", 0) } catch (_: Exception) { 0 }
 
     // Show a confirmation dialog before logging out
     private fun showLogoutConfirmation() {
