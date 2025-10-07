@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -22,12 +21,11 @@
         android:id="@+id/rvMessages"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_below="@id/tvChatTitle"
+        android:layout_above="@+id/layoutInput"
         android:padding="8dp"
         android:paddingBottom="96dp"
-        android:clipToPadding="false"
-        android:layout_alignParentTop="true"
-        android:layout_below="@id/tvChatTitle"
-        android:layout_above="@+id/layoutInput" />
+        android:clipToPadding="false" />
 
     <!-- Input bar inside the fragment (styled to app colors, not debug yellow) -->
     <LinearLayout

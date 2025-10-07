@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -16,26 +17,6 @@ private const val VIEW_TYPE_SENT = 1
 private const val VIEW_TYPE_RECEIVED = 2
 
 class ChatAdapter(private val currentUserId: Long) : ListAdapter<Message, RecyclerView.ViewHolder>(DiffCallback()) {
-
-    // Helper: pick a deterministic background for a message (cycles through variants)
-    private fun pickBackgroundRes(m: Message, isSent: Boolean): Int {
-        val sentVariants = intArrayOf(
-            R.drawable.bg_message_sent_variant_1,
-            R.drawable.bg_message_sent_variant_2,
-            R.drawable.bg_message_sent_variant_3,
-            R.drawable.bg_message_sent_variant_4
-        )
-        val recvVariants = intArrayOf(
-            R.drawable.bg_message_received_variant_1,
-            R.drawable.bg_message_received_variant_2,
-            R.drawable.bg_message_received_variant_3,
-            R.drawable.bg_message_received_variant_1 // reuse first as a simple 4th fallback
-        )
-        val variants = if (isSent) sentVariants else recvVariants
-        val key = m.id?.hashCode() ?: (m.message + ":" + m.senderID).hashCode()
-        val idx = kotlin.math.abs(key) % variants.size
-        return variants[idx]
-    }
 
     override fun getItemViewType(position: Int): Int {
         val msg = getItem(position)
@@ -61,74 +42,49 @@ class ChatAdapter(private val currentUserId: Long) : ListAdapter<Message, Recycl
 
     class SentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val bubble: View? = itemView.findViewById(R.id.messageBubbleSent)
-        private val tvSenderName: TextView? = itemView.findViewById(R.id.tvSenderNameSent)
         private val tvMessage: TextView? = itemView.findViewById(R.id.tvMessageSent)
         private val tvTime: TextView? = itemView.findViewById(R.id.tvTimeSent)
+
         fun bind(m: Message, currentUserId: Long) {
-            // Prefer server-provided senderName; if absent and the message is from the current user show "You"
-            val name = m.senderName ?: m.receiverName ?: if (m.senderID == currentUserId) "You" else "User ${m.senderID}"
-            tvSenderName?.text = name
-
-            // Apply background variant and adjust text color for contrast
-            try {
-                val adapter = this@SentViewHolder
-                // We'll compute the background by using the adapter's pick function via itemView.context resources
-                val ctx = itemView.context
-                val key = m.id?.hashCode() ?: (m.message + ":" + m.senderID).hashCode()
-                val variants = listOf(
-                    R.drawable.bg_message_sent_variant_1,
-                    R.drawable.bg_message_sent_variant_2,
-                    R.drawable.bg_message_sent_variant_3,
-                    R.drawable.bg_message_sent_variant_4
-                )
-                val idx = kotlin.math.abs(key) % variants.size
-                bubble?.setBackgroundResource(variants[idx])
-
-                // Sent bubbles are generally darker – use white text for readability
-                tvMessage?.setTextColor(Color.WHITE)
-                tvSenderName?.setTextColor(Color.WHITE)
-                tvTime?.setTextColor(Color.parseColor("#DDDDDD"))
-            } catch (_: Exception) {
-                // ignore background failures
-            }
-
+            // Message text and time
             tvMessage?.visibility = View.VISIBLE
             tvMessage?.text = m.message
             tvTime?.text = m.timestamp ?: ""
+
+            // Style sent bubble (prefer drawable but fallback to color)
+            try {
+                bubble?.setBackgroundResource(R.drawable.bg_message_sent)
+            } catch (_: Exception) {
+                bubble?.setBackgroundColor("#DFF0D8".toColorInt()) // light green fallback
+            }
+
+            // Colors
+            tvMessage?.setTextColor(Color.BLACK)
+            tvTime?.setTextColor("#666666".toColorInt())
         }
     }
 
     class ReceivedViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val bubble: View? = itemView.findViewById(R.id.messageBubbleReceived)
-        private val tvSenderName: TextView? = itemView.findViewById(R.id.tvSenderName)
         private val tvMessage: TextView? = itemView.findViewById(R.id.tvMessageReceived)
         private val tvTime: TextView? = itemView.findViewById(R.id.tvTimeReceived)
+
         fun bind(m: Message, currentUserId: Long) {
-            val name = m.senderName ?: m.receiverName ?: if (m.senderID == currentUserId) "You" else "User ${m.senderID}"
-            tvSenderName?.text = name
-
-            try {
-                val key = m.id?.hashCode() ?: (m.message + ":" + m.senderID).hashCode()
-                val variants = listOf(
-                    R.drawable.bg_message_received_variant_1,
-                    R.drawable.bg_message_received_variant_2,
-                    R.drawable.bg_message_received_variant_3,
-                    R.drawable.bg_message_received_variant_1
-                )
-                val idx = kotlin.math.abs(key) % variants.size
-                bubble?.setBackgroundResource(variants[idx])
-
-                // Received bubbles are light -> use dark text
-                tvMessage?.setTextColor(Color.BLACK)
-                tvSenderName?.setTextColor(Color.parseColor("#333333"))
-                tvTime?.setTextColor(Color.parseColor("#666666"))
-            } catch (_: Exception) {
-                // ignore
-            }
-
+            // Message text and time
             tvMessage?.visibility = View.VISIBLE
             tvMessage?.text = m.message
             tvTime?.text = m.timestamp ?: ""
+
+            // Use a single white bubble for received messages
+            try {
+                bubble?.setBackgroundResource(R.drawable.bg_message_received)
+            } catch (_: Exception) {
+                bubble?.setBackgroundColor(Color.WHITE)
+            }
+
+            // Colors for received messages
+            tvMessage?.setTextColor(Color.BLACK)
+            tvTime?.setTextColor("#666666".toColorInt())
         }
     }
 

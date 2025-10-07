@@ -60,14 +60,32 @@ class ChatFragment : Fragment() {
         rvMessages.clipToPadding = false
         try { rvMessages.elevation = 8f * resources.displayMetrics.density } catch (_: Exception) {}
 
-        // Adjust RecyclerView bottom padding so last message is visible above the input (post to ensure measurements are ready)
+        // Adjust RecyclerView bottom/top padding so last message is visible above the input and
+        // so messages won't overlap the activity/fragment title or toolbar. Post so measurements exist.
         try {
             v.post {
                 try {
                     val input = v.findViewById<View?>(R.id.layoutInput)
                     val inputH = input?.height ?: (56 * resources.displayMetrics.density).toInt()
                     val extra = (8 * resources.displayMetrics.density).toInt()
-                    rvMessages.setPadding(rvMessages.paddingLeft, rvMessages.paddingTop, rvMessages.paddingRight, inputH + extra)
+                    val topExtra = (8 * resources.displayMetrics.density).toInt()
+
+                    // Decide top offset: when the fragment's own title is visible, the RecyclerView
+                    // is already laid out below it (we used layout_below in XML), so no additional
+                    // top padding is necessary. When the fragment title is hidden, the activity's
+                    // toolbar may show the partner name, so reserve actionBarSize space.
+                    val topOffset = try {
+                        if (tvChatTitle.visibility == View.VISIBLE) 0
+                        else {
+                            val tv = android.util.TypedValue()
+                            val has = requireContext().theme.resolveAttribute(android.R.attr.actionBarSize, tv, true)
+                            if (has) android.util.TypedValue.complexToDimensionPixelSize(tv.data, resources.displayMetrics)
+                            else (56 * resources.displayMetrics.density).toInt()
+                        }
+                    } catch (_: Exception) { (56 * resources.displayMetrics.density).toInt() }
+
+                    // Apply single padding update (preserve left/right)
+                    rvMessages.setPadding(rvMessages.paddingLeft, topOffset + topExtra, rvMessages.paddingRight, inputH + extra)
                 } catch (_: Exception) {}
             }
         } catch (_: Exception) {}

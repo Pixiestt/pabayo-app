@@ -2,30 +2,28 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:orientation="horizontal"
     android:gravity="start"
     android:padding="4dp">
 
+    <!-- Left placeholder to keep received bubbles away from the edge and avoid overlapping title -->
+    <View
+        android:id="@+id/leftPlaceholderReceived"
+        android:layout_width="@dimen/received_left_placeholder_width"
+        android:layout_height="wrap_content" />
+
+    <!-- Bubble column (message) -->
     <LinearLayout
         android:id="@+id/messageBubbleReceived"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="48dp"
+        android:layout_marginStart="@dimen/received_bubble_margin_start"
+        android:layout_marginEnd="80dp"
         android:layout_gravity="start"
         android:background="@drawable/bg_message_received"
         android:maxWidth="280dp"
-        android:padding="8dp"
+        android:padding="12dp"
         android:orientation="vertical">
-
-        <!-- New: sender name shown above message for received messages -->
-        <TextView
-            android:id="@+id/tvSenderName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#333333"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
 
         <TextView
             android:id="@+id/tvMessageReceived"
