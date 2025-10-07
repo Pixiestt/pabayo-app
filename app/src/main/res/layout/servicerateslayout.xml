@@ -3,12 +3,12 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:padding="16sp"
+    android:padding="16dp"
     android:background="@drawable/serviceratebackground">
 
     <TextView
         android:id="@+id/tvTitle"
-        android:text="Service Rates"
+        android:text="@string/service_rates"
         android:textStyle="bold"
         android:textSize="18sp"
         android:layout_width="wrap_content"
@@ -18,7 +18,7 @@
 
     <TextView
         android:id="@+id/tvPabayoLabel"
-        android:text="Pabayo"
+        android:text="@string/sr_pabayo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@id/tvTitle"
@@ -29,13 +29,13 @@
         android:id="@+id/tvPabayoRate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="2.50 / kilo"
+        android:text="@string/sr_pabayo_rate"
         app:layout_constraintBaseline_toBaselineOf="@id/tvPabayoLabel"
         app:layout_constraintEnd_toEndOf="parent" />
 
     <TextView
         android:id="@+id/tvPickupLabel"
-        android:text="Pick up"
+        android:text="@string/sr_pickup"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@id/tvPabayoLabel"
@@ -44,7 +44,7 @@
 
     <TextView
         android:id="@+id/tvPickupRate"
-        android:text="10.00"
+        android:text="@string/sr_pickup_rate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintBaseline_toBaselineOf="@id/tvPickupLabel"
@@ -52,7 +52,7 @@
 
     <TextView
         android:id="@+id/tvDeliveryLabel"
-        android:text="Delivery"
+        android:text="@string/sr_delivery"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@id/tvPickupLabel"
@@ -61,7 +61,7 @@
 
     <TextView
         android:id="@+id/tvDeliveryRate"
-        android:text="10.00"
+        android:text="@string/sr_delivery_rate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintBaseline_toBaselineOf="@id/tvDeliveryLabel"
@@ -72,7 +72,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Feeds Conversion"
+        android:text="@string/sr_feeds_conversion"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvDeliveryLabel" />
 
@@ -81,7 +81,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="220.00 / 1 kilo"
+        android:text="@string/sr_feeds_rate1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toEndOf="@+id/tvFeedsConversionLabel"
@@ -92,7 +92,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="110.00 / 1/2 kilo"
+        android:text="@string/sr_feeds_rate2"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvFeedsRate1" />
 

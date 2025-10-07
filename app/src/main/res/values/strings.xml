@@ -125,4 +125,35 @@
     <string name="hide_debug">Hide debug</string>
     <string name="requesting_conversation_id">Requesting conversationID=%1$s for user=%2$d</string>
     <string name="requesting_conversation_other">Requesting conversation with otherUserID=%1$d for user=%2$d</string>
+    <string name="use_signup_address">Use my signup address</string>
+    <string name="label_pickup_date">Pickup Date</string>
+    <string name="hint_pickup_date">Select pickup date</string>
+    <string name="next">Next</string>
+    <string name="bg_rice_field">Rice field background</string>
+
+    <!-- Milling fragment strings -->
+    <string name="step_title">Step 1 of 5:</string>
+    <string name="details_title">Details of Rice Milling</string>
+    <string name="step_progress_text">1/5</string>
+    <string name="select_milling_service">Select the type of rice milling service:</string>
+    <string name="currency_dollar">$</string>
+    <string name="milling_for_fee">Milling for a fee</string>
+    <string name="label_number_of_sacks">Number of sacks:</string>
+    <string name="minus">-</string>
+    <string name="plus">+</string>
+    <string name="sack_default_count">1</string>
+    <string name="service_rates">Service rates</string>
+    <string name="rate_per_sack_label">Rate per sack:</string>
+    <string name="rate_per_sack_value">₱20.00</string>
+
+    <!-- Service rates layout strings -->
+    <string name="sr_pabayo">Pabayo</string>
+    <string name="sr_pabayo_rate">2.50 / kilo</string>
+    <string name="sr_pickup">Pick up</string>
+    <string name="sr_pickup_rate">10.00</string>
+    <string name="sr_delivery">Delivery</string>
+    <string name="sr_delivery_rate">10.00</string>
+    <string name="sr_feeds_conversion">Feeds Conversion</string>
+    <string name="sr_feeds_rate1">220.00 / 1 kilo</string>
+    <string name="sr_feeds_rate2">110.00 / 1/2 kilo</string>
 </resources>

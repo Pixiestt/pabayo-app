@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.RadioGroup
 import android.widget.TextView
@@ -18,6 +19,9 @@ import java.util.Locale
 import com.example.capstone2.R
 import com.example.capstone2.data.models.PickupService
 import androidx.core.widget.addTextChangedListener
+import androidx.lifecycle.ViewModelProvider
+import com.example.capstone2.viewmodel.UserViewModel
+import com.example.capstone2.viewmodel.UserViewModelFactory
 
 class PickupServiceFragment : Fragment() {
     
@@ -27,7 +31,11 @@ class PickupServiceFragment : Fragment() {
     private lateinit var etPickupDate: EditText
     private lateinit var btnNext: Button
     private lateinit var tvStepProgress: TextView
-    
+    private lateinit var cbUseSignupAddress: CheckBox
+
+    private lateinit var userViewModel: UserViewModel
+    private var savedHomeAddress: String = ""
+
     private val calendar = Calendar.getInstance()
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.UK)
     private val TAG = "PickupServiceFragment"
@@ -50,10 +58,39 @@ class PickupServiceFragment : Fragment() {
         etPickupDate = view.findViewById(R.id.etPickupDate)
         btnNext = view.findViewById(R.id.btnNext)
         tvStepProgress = view.findViewById(R.id.tvStepProgress)
-        
+        cbUseSignupAddress = view.findViewById(R.id.cbUseSignupAddress)
+
+        userViewModel = ViewModelProvider(
+            requireActivity(),
+            UserViewModelFactory(requireContext())
+        )[UserViewModel::class.java]
+
         val activity = requireActivity() as RequestWizardActivity
         tvStepProgress.text = "2/5"
         
+        // Observe user profile to get saved home address
+        userViewModel.getProfile().observe(viewLifecycleOwner) { user ->
+            if (user != null) {
+                // user.homeAddress is non-null in this project model
+                savedHomeAddress = user.homeAddress
+
+                // If wizard had the same address previously selected, reflect that in the checkbox
+                val wizard = activity.getWizardData()
+                if (!savedHomeAddress.isBlank() && wizard.pickupLocation == savedHomeAddress) {
+                    cbUseSignupAddress.isChecked = true
+                    etPickupLocation.setText(savedHomeAddress)
+                    etPickupLocation.isEnabled = false
+                }
+
+                // If the user already checked the checkbox while profile was loading,
+                // apply the saved home address now so the field is populated and locked.
+                if (cbUseSignupAddress.isChecked && savedHomeAddress.isNotBlank()) {
+                    etPickupLocation.setText(savedHomeAddress)
+                    etPickupLocation.isEnabled = false
+                }
+            }
+        }
+
         // Prefill from wizard data if present
         val wizard = activity.getWizardData()
         wizard.pickupService?.let { ps ->
@@ -97,6 +134,33 @@ class PickupServiceFragment : Fragment() {
 
         setNextEnabled(false)
 
+        // Checkbox listener: autofill with signup address and disable editing when checked
+        cbUseSignupAddress.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                // If we don't yet have the saved home address, try to read from ViewModel immediately
+                if (savedHomeAddress.isBlank()) {
+                    // Will be filled by observer when profile loads; clear for now
+                    etPickupLocation.setText("")
+                } else {
+                    etPickupLocation.setText(savedHomeAddress)
+                }
+                etPickupLocation.isEnabled = false
+                etPickupLocation.isFocusable = false
+                // Immediately reflect selection in wizard data
+                activity.getWizardData().pickupLocation = if (savedHomeAddress.isNotBlank()) savedHomeAddress else activity.getWizardData().pickupLocation
+            } else {
+                // Allow user to edit a custom address
+                // If wizard was using the saved home address, clear it so user can provide a custom one
+                val wizard = activity.getWizardData()
+                if (wizard.pickupLocation == savedHomeAddress) {
+                    wizard.pickupLocation = null
+                }
+                etPickupLocation.isEnabled = true
+                etPickupLocation.isFocusableInTouchMode = true
+            }
+            validateForm()
+        }
+
         // Set up radio button listeners
         radioGroup.setOnCheckedChangeListener { _, checkedId ->
             when (checkedId) {
@@ -116,6 +180,8 @@ class PickupServiceFragment : Fragment() {
                     etPickupLocation.text.clear()
                     etPickupDate.text.clear()
                     etPickupDate.visibility = View.GONE
+                    // reset checkbox when hiding
+                    cbUseSignupAddress.isChecked = false
                     validateForm()
                 }
                 else -> {
