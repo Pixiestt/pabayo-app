@@ -30,14 +30,6 @@
             </PendingDiffInfo>
           </value>
         </entry>
-        <entry key="$PROJECT_DIR$/app/src/main/res/values/dimens.xml">
-          <value>
-            <PendingDiffInfo>
-              <option name="filePath" value="$PROJECT_DIR$/app/src/main/res/values/dimens.xml" />
-              <option name="updatedContent" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;&#10;&lt;resources&gt;&#10;    &lt;!-- Left placeholder width for received messages (adjust this to move the received bubble horizontally) --&gt;&#10;    &lt;dimen name=&quot;received_left_placeholder_width&quot;&gt;120dp&lt;/dimen&gt;&#10;    &lt;!-- Start margin for the received bubble (additional nudge from the placeholder) --&gt;&#10;    &lt;dimen name=&quot;received_bubble_margin_start&quot;&gt;16dp&lt;/dimen&gt;&#10;&lt;/resources&gt;" />
-            </PendingDiffInfo>
-          </value>
-        </entry>
       </map>
     </option>
   </component>
