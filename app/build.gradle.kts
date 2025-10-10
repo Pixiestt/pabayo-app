@@ -60,9 +60,16 @@ dependencies {
     implementation(libs.okhttp)
     implementation (libs.kotlinx.coroutines.android)
 
+    //firebase
+    implementation("com.google.firebase:firebase-messaging:21.1.0")
+    implementation("com.pusher:push-notifications-android:1.9.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation("androidx.test:rules:1.7.0")
     androidTestImplementation("androidx.test:core:1.7.0")
 }
+
+// Apply the Google Services plugin so the google-services.json is processed
+apply(plugin = "com.google.gms.google-services")

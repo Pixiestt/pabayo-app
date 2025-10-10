@@ -17,6 +17,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Capstone"
         tools:targetApi="34" >
+
+        <!-- Fallback notification icon (non-adaptive) and color used by FCM to avoid crashes on Oreo -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color" />
+
         <activity
             android:name=".authentication.LoginActivity"
             android:exported="true" >
