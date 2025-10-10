@@ -18,7 +18,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Step 2 of 5:"
+            android:text="@string/step2_title"
             android:textColor="@color/white"
             android:textSize="16sp" />
 
@@ -26,7 +26,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Pick up Service"
+            android:text="@string/pickup_service_title"
             android:textColor="@color/white"
             android:textSize="24sp"
             android:textStyle="bold" />
@@ -36,7 +36,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="2/5"
+            android:text="@string/step2_progress"
             android:textColor="@color/white"
             android:textSize="14sp" />
 
@@ -87,7 +87,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Select completed"
+                android:text="@string/select_completed"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="24dp" />
@@ -105,7 +105,7 @@
                     android:layout_marginBottom="16dp"
                     android:background="@drawable/radio_button_background"
                     android:padding="20dp"
-                    android:text="Pick up the palay from my location"
+                    android:text="@string/pickup_from_my_location"
                     android:textSize="16sp" />
 
                 <RadioButton
@@ -114,7 +114,7 @@
                     android:layout_height="wrap_content"
                     android:background="@drawable/radio_button_background"
                     android:padding="20dp"
-                    android:text="I will drop off the palay at your facility"
+                    android:text="@string/dropoff_at_facility"
                     android:textSize="16sp" />
 
             </RadioGroup>
@@ -131,7 +131,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Enter your location"
+                    android:text="@string/enter_your_location"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
@@ -141,7 +141,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:background="@drawable/edit_text_background"
-                    android:hint="@string/hint_address"
+                    android:hint="@string/hint_delivery_address"
                     android:inputType="textPostalAddress"
                     android:autofillHints="postalAddress"
                     android:padding="16dp"

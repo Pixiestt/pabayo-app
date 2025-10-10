@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Queue Status"
+        android:text="@string/label_status"
         android:textSize="20sp"
         android:textStyle="bold"
         android:gravity="center"
@@ -30,7 +30,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Processing"
+                android:text="@string/rb_processing"
                 android:textAlignment="center"
                 android:textSize="18sp"
                 android:textStyle="bold"
@@ -66,7 +66,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Pending"
+                android:text="@string/rb_pending"
                 android:textAlignment="center"
                 android:textSize="18sp"
                 android:textStyle="bold"
@@ -88,4 +88,4 @@
             </ScrollView>
         </LinearLayout>
     </LinearLayout>
-</LinearLayout> 
+</LinearLayout>

@@ -19,22 +19,6 @@
             android:layout_width="@dimen/received_left_placeholder_width"
             android:layout_height="wrap_content" />
 
-        <!-- Sender name for received messages -->
-        <TextView
-            android:id="@+id/tvSenderNameReceived"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/received_bubble_margin_start"
-            android:layout_marginEnd="80dp"
-            android:textColor="#333333"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:paddingStart="12dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp"
-            android:paddingEnd="4dp"
-            android:visibility="visible" />
-
     </LinearLayout>
 
     <!-- Bubble column (message) -->

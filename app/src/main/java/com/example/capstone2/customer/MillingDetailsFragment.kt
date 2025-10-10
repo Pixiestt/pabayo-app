@@ -42,8 +42,8 @@ class MillingDetailsFragment : Fragment() {
         btnMinus = view.findViewById(R.id.btnMinus)
 
         val activity = requireActivity() as RequestWizardActivity
-        tvStepProgress.text = "1/5"
-        
+        tvStepProgress.text = "1/4"
+
         // Prefill from wizard data if editing
         val wizard = activity.getWizardData()
         sackCount = wizard.sackCount

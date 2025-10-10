@@ -28,7 +28,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Step 3 of 5:"
+            android:text="@string/step3_title"
             android:textColor="@color/white"
             android:textSize="16sp" />
 
@@ -36,7 +36,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Delivery Service"
+            android:text="@string/delivery_service_title"
             android:textColor="@color/white"
             android:textSize="24sp"
             android:textStyle="bold" />
@@ -46,7 +46,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="3/5"
+            android:text="@string/step3_progress"
             android:textColor="@color/white"
             android:textSize="14sp" />
 
@@ -110,7 +110,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="How would you like to receive your milled rice?"
+                    android:text="@string/delivery_question"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="24dp" />
@@ -128,7 +128,7 @@
                         android:layout_marginBottom="16dp"
                         android:background="@drawable/radio_button_background"
                         android:padding="20dp"
-                        android:text="Deliver the milled rice to my location"
+                        android:text="@string/rb_deliver_to_location"
                         android:textSize="16sp" />
 
                     <RadioButton
@@ -137,7 +137,7 @@
                         android:layout_height="wrap_content"
                         android:background="@drawable/radio_button_background"
                         android:padding="20dp"
-                        android:text="I will pick up the milled rice from your facility"
+                        android:text="@string/rb_pickup_from_facility"
                         android:textSize="16sp" />
 
                 </RadioGroup>
@@ -154,7 +154,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Enter your delivery address"
+                        android:text="@string/label_delivery_address"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="8dp" />
@@ -164,7 +164,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
                         android:background="@drawable/edit_text_background"
-                        android:hint="@string/hint_address"
+                        android:hint="@string/hint_delivery_address"
                         android:inputType="textPostalAddress"
                         android:autofillHints="postalAddress"
                         android:padding="16dp"
