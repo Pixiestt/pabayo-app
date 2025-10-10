@@ -49,41 +49,27 @@ class MillingDetailsFragment : Fragment() {
         sackCount = wizard.sackCount
         tvSackCount.text = sackCount.toString()
 
-        wizard.millingType?.let { mt ->
-            when (mt) {
-                MillingType.MILLING_FOR_FEE -> radioGroup.check(R.id.rbMillingForFee)
-                MillingType.MILLING_FOR_RICE_CONVERSION -> {
-                    // No specific radio in this layout for rice conversion; keep default selection or clear
-                    // If you add a radio/button for this option in the layout, update this block.
-                }
-            }
-            btnNext.isEnabled = true
-        }
+        // Since the layout no longer contains radio options, enable Next so the user can proceed
+        btnNext.isEnabled = true
 
-        // Initially disable the Next button if not prefilling
-        if (!btnNext.isEnabled) btnNext.isEnabled = false
-
-        // Set up radio button listeners
+        // Set up radio button listeners — keep minimal and avoid referencing removed IDs
         radioGroup.setOnCheckedChangeListener { _, checkedId ->
-            // Enable the Next button when an option is selected
+            // Enable the Next button when an option is selected (still safe if radios are later added)
             btnNext.isEnabled = true
-            
+
+            // Try to detect the selected radio and map to MillingType if applicable.
             val selectedRadio = view.findViewById<RadioButton>(checkedId)
-            when (selectedRadio?.id) {
-                R.id.rbMillingForFee -> {
-                    activity.getWizardData().millingType = MillingType.MILLING_FOR_FEE
-                }
+            when (selectedRadio?.text?.toString()) {
+                // If you later add a radio with text matching these strings, map accordingly.
+                getString(R.string.milling_for_fee) -> activity.getWizardData().millingType = MillingType.MILLING_FOR_FEE
+                getString(R.string.sr_feeds_conversion) -> activity.getWizardData().millingType = MillingType.MILLING_FOR_RICE_CONVERSION
                 else -> {
-                    // No other radios in this layout; leave wizard value as-is or handle future options.
+                    // No mapping; leave millingType unchanged or set to null depending on desired behavior.
                 }
             }
         }
         
-        // Set up CardView click listener for the available option
-        val cardMillingForFee = view.findViewById<androidx.cardview.widget.CardView>(R.id.cardMillingForFee)
-        cardMillingForFee?.setOnClickListener {
-            radioGroup.check(R.id.rbMillingForFee)
-        }
+        // Removed click binding to deleted CardView (cardMillingForFee) to avoid referencing missing view IDs.
 
         btnPlus.setOnClickListener {
             sackCount++
@@ -97,10 +83,9 @@ class MillingDetailsFragment : Fragment() {
         }
 
         btnNext.setOnClickListener {
-            if (radioGroup.checkedRadioButtonId != -1) {
-                activity.getWizardData().sackCount = sackCount
-                activity.goToNextStep()
-            }
+            // Allow proceeding even if there is no radio selected (layout currently has no radios)
+            activity.getWizardData().sackCount = sackCount
+            activity.goToNextStep()
         }
     }
 }
