@@ -66,8 +66,8 @@ class PickupServiceFragment : Fragment() {
         )[UserViewModel::class.java]
 
         val activity = requireActivity() as RequestWizardActivity
-        tvStepProgress.text = "2/5"
-        
+        tvStepProgress.text = "2/4"
+
         // Observe user profile to get saved home address
         userViewModel.getProfile().observe(viewLifecycleOwner) { user ->
             if (user != null) {

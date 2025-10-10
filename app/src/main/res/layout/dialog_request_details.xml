@@ -83,7 +83,7 @@
             android:id="@+id/tvDetailContact"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Contact number: Loading..."
+            android:text="@string/contact_number_loading"
             android:layout_marginTop="8dp"
             android:visibility="gone"
             android:textStyle="bold" />
@@ -100,14 +100,14 @@
                 android:id="@+id/btnCall"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Call"
+                android:text="@string/action_call"
                 android:visibility="gone" />
 
             <Button
                 android:id="@+id/btnCopy"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Copy"
+                android:text="@string/copy_debug"
                 android:layout_marginStart="8dp"
                 android:visibility="gone" />
 
@@ -115,7 +115,7 @@
                 android:id="@+id/btnMessage"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Message"
+                android:text="@string/action_message"
                 android:layout_marginStart="8dp"
                 android:visibility="gone" />
 
@@ -123,7 +123,7 @@
                 android:id="@+id/btnViewProfile"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="View profile"
+                android:text="@string/action_view_profile"
                 android:layout_marginStart="8dp"
                 android:visibility="gone" />
         </LinearLayout>
@@ -152,7 +152,7 @@
             android:id="@+id/btnEdit"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Edit"
+            android:text="@string/action_edit"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="12dp"
             android:visibility="gone" />

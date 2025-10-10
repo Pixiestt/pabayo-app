@@ -53,8 +53,8 @@ class DeliveryServiceFragment : Fragment() {
         )[UserViewModel::class.java]
 
         val activity = requireActivity() as RequestWizardActivity
-        tvStepProgress.text = "3/5"
-        
+        tvStepProgress.text = "3/4"
+
         // Observe profile to get home address
         userViewModel.getProfile().observe(viewLifecycleOwner) { user ->
             if (user != null) {

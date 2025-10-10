@@ -23,7 +23,7 @@ class RequestWizardActivity : AppCompatActivity() {
     private lateinit var requestWizardData: RequestWizardData
     private lateinit var requestViewModel: RequestViewModel
     private var currentStep = 1
-    private val totalSteps = 5
+    private val totalSteps = 4
     private var editingRequestId: Long? = null
 
     companion object {
@@ -118,7 +118,6 @@ class RequestWizardActivity : AppCompatActivity() {
             2 -> PickupServiceFragment()
             3 -> DeliveryServiceFragment()
             4 -> FeedsConversionFragment()
-            5 -> ContactDetailsFragment()
             else -> throw IllegalArgumentException("Invalid step: $step")
         }
         

@@ -83,6 +83,7 @@
     <string name="label_email">Email:</string>
     <string name="label_contact">Contact number:</string>
     <string name="label_address">Home address:</string>
+    <string name="label_contact_number">Contact Number:</string>
 
     <!-- Validation messages -->
     <string name="error_first_name_required">Please enter your first name</string>
@@ -109,7 +110,7 @@
     <string name="rb_processing">Processing</string>
     <string name="rb_out_for_delivery">Out for Delivery</string>
     <string name="rb_waiting_customer_pickup">Done milling</string>
-    <string name="submit">Update</string>
+    <string name="submit">Submit</string>
 
     <!-- Add title string used in owner fragment -->
     <string name="title_track">Update Status</string>
@@ -118,10 +119,10 @@
 
     <!-- Added for chat fragment -->
     <string name="copy_debug">Copy</string>
-    <string name="hint_type_message">Type a message</string>
+    <string name="hint_type_message">Type a message…</string>
     <string name="send">Send</string>
     <!-- Debug UI strings -->
-    <string name="waiting_debug">Waiting for debug output...</string>
+    <string name="waiting_debug">Waiting for debug output…</string>
     <string name="messages_label">Messages:\n</string>
     <string name="show_debug">Show debug</string>
     <string name="hide_debug">Hide debug</string>
@@ -134,9 +135,9 @@
     <string name="bg_rice_field">Rice field background</string>
 
     <!-- Milling fragment strings -->
-    <string name="step_title">Step 1 of 5:</string>
+    <string name="step_title">Step 1 of 4:</string>
     <string name="details_title">Details of Rice Milling</string>
-    <string name="step_progress_text">1/5</string>
+    <string name="step_progress_text">1/4</string>
     <string name="select_milling_service">Select the type of rice milling service:</string>
     <string name="currency_dollar">$</string>
     <string name="milling_for_fee">Milling for a fee</string>
@@ -157,5 +158,77 @@
     <string name="sr_delivery_rate">10.00</string>
     <string name="sr_feeds_conversion">Feeds Conversion</string>
     <string name="sr_feeds_rate1">220.00 / 1 kilo</string>
-    <string name="sr_feeds_rate2">110.00 / 1/2 kilo</string>
+    <string name="sr_feeds_rate2">110.00 / ½ kilo</string>
+
+    <!-- Step labels for wizard fragments -->
+    <string name="step1_title">Step 1 of 4:</string>
+    <string name="step2_title">Step 2 of 4:</string>
+    <string name="step3_title">Step 3 of 4:</string>
+    <string name="step4_title">Step 4 of 4:</string>
+
+    <!-- Delivery and contact information labels used by updated layouts -->
+    <string name="delivery_service_title">Delivery Service</string>
+    <!-- Added missing strings referenced by layouts -->
+    <string name="pickup_service_title">Pick up Service</string>
+    <string name="step2_progress">2/4</string>
+    <string name="select_completed">Select completed</string>
+    <string name="pickup_from_my_location">Pick up the palay from my location</string>
+    <string name="dropoff_at_facility">I will drop off the palay at your facility</string>
+    <string name="enter_your_location">Enter your location</string>
+    <string name="contact_number_loading">Loading…</string>
+    <string name="action_call">Call</string>
+    <string name="action_message">Message</string>
+    <string name="action_view_profile">View profile</string>
+    <string name="action_edit">Edit</string>
+    <string name="step3_progress">3/4</string>
+    <string name="step4_progress">4/4</string>
+    <string name="delivery_question">How would you like to receive your milled rice?</string>
+    <string name="rb_deliver_to_location">Deliver the milled rice to my location</string>
+    <string name="rb_pickup_from_facility">I will pick up the milled rice from your facility</string>
+    <string name="label_delivery_address">Enter your delivery address</string>
+    <string name="hint_delivery_address">Enter your delivery address</string>
+
+    <string name="contact_details_title">Contact Details</string>
+    <string name="contact_information">Contact Information</string>
+    <string name="label_name">Name</string>
+    <string name="hint_enter_name">Enter your name</string>
+    <string name="hint_enter_contact_number">Enter your contact number</string>
+    <string name="additional_comments_optional">Additional Comments (Optional)</string>
+    <string name="hint_message_for_owner">Message for the owner</string>
+
+    <!-- Strings added for owner and queue layouts -->
+    <string name="queue_status">Queue Status</string>
+    <string name="processing_label">Processing</string>
+    <string name="pending_label">Pending</string>
+
+    <string name="request_title">Request</string>
+    <string name="home_title">Homepage</string>
+    <string name="btn_view_requests">View Requests</string>
+    <string name="btn_view_history">View Transaction History</string>
+    <string name="btn_view_messages">View Messages</string>
+    <string name="messages_badge_zero">0</string>
+
+    <!-- New strings added to support recent layout refactors -->
+    <string name="start_date_hint">Start date</string>
+    <string name="end_date_hint">End date</string>
+    <string name="action_filter">Filter</string>
+    <string name="action_clear">Clear</string>
+    <string name="no_completed_requests">No completed requests found</string>
+
+    <string name="feeds_conversion_question">Would you like to convert your milling by-products (rice hulls, bran) into animal feeds?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="feeds_conversion_explanation">Converting by-products can provide a sustainable stream. We process the hulls and bran into nutrient-rich feed pellets, ready for sale or your own use.</string>
+
+    <!-- Authentication / Signup strings -->
+    <string name="create_account">Create Account</string>
+    <string name="identification">Identification</string>
+    <string name="hint_password">Password</string>
+    <string name="hint_confirm_password">Confirm password</string>
+    <string name="action_sign_up">Sign Up</string>
+    <string name="already_have_account">Already have an account?</string>
+    <string name="choose_photo">Choose photo</string>
+    <string name="sign_in">Sign in</string>
+    <string name="content_desc_id_photo">Identification photo</string>
+    <string name="content_desc_back_button">Back</string>
 </resources>

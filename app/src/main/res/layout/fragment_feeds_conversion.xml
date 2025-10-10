@@ -18,7 +18,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Step 4 of 5:"
+            android:text="@string/step4_title"
             android:textColor="@color/white"
             android:textSize="16sp" />
 
@@ -26,7 +26,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Feeds Conversion"
+            android:text="@string/sr_feeds_conversion"
             android:textColor="@color/white"
             android:textSize="24sp"
             android:textStyle="bold" />
@@ -36,7 +36,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="4/5"
+            android:text="@string/step4_progress"
             android:textColor="@color/white"
             android:textSize="14sp" />
 
@@ -76,7 +76,7 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:background="@color/light_gray" />
+                android:background="@color/primary_green" />
 
         </LinearLayout>
 
@@ -87,7 +87,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:fillViewport="true"
-        app:layout_constraintBottom_toTopOf="@+id/btnNext"
+        app:layout_constraintBottom_toTopOf="@+id/btnSubmit"
         app:layout_constraintTop_toBottomOf="@+id/headerLayout">
 
         <LinearLayout
@@ -99,81 +99,94 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Would you like to convert your milling by-products (rice hulls, bran) into animal feeds?"
+                android:text="@string/feeds_conversion_question"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="32dp" />
 
             <!-- Toggle Switch -->
-            <LinearLayout
+            <!-- RadioGroup with Yes / No options for feeds conversion -->
+            <RadioGroup
+                android:id="@+id/radioGroupFeeds"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="8dp"
+                android:padding="4dp">
 
-                <!-- RadioGroup with Yes / No options for feeds conversion -->
-                <RadioGroup
-                    android:id="@+id/radioGroupFeeds"
-                    android:layout_width="match_parent"
+                <RadioButton
+                    android:id="@+id/radioFeedsYes"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp"
-                    android:padding="4dp">
+                    android:layout_weight="1"
+                    android:text="@string/yes"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:buttonTint="@color/primary_main"
+                    android:padding="12dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless" />
 
-                    <RadioButton
-                        android:id="@+id/radioFeedsYes"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Yes"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:buttonTint="@color/primary_main"
-                        android:padding="12dp"
-                        android:layout_marginEnd="8dp"
-                        android:background="?attr/selectableItemBackgroundBorderless" />
+                <RadioButton
+                    android:id="@+id/radioFeedsNo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/no"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:gravity="end"
+                    android:buttonTint="@color/primary_main"
+                    android:padding="12dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless" />
 
-                    <RadioButton
-                        android:id="@+id/radioFeedsNo"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="No"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:gravity="end"
-                        android:buttonTint="@color/primary_main"
-                        android:padding="12dp"
-                        android:layout_marginStart="8dp"
-                        android:background="?attr/selectableItemBackgroundBorderless" />
-
-                </RadioGroup>
-
-            </LinearLayout>
+            </RadioGroup>
 
             <!-- Explanation Text -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Converting by-products can provide a sustainable stream. We process the hulls and bran into nutrient-rich feed pellets, ready for sale or your own use."
+                android:text="@string/feeds_conversion_explanation"
                 android:textSize="14sp"
                 android:lineSpacingExtra="4dp"
                 android:textColor="@color/text_secondary" />
+
+            <!-- Additional Comments moved from Contact Details (optional) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/additional_comments_optional"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp" />
+
+            <EditText
+                android:id="@+id/etComment"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:background="@drawable/edit_text_background"
+                android:gravity="top|start"
+                android:hint="@string/hint_message_for_owner"
+                android:autofillHints="none"
+                android:inputType="textMultiLine"
+                android:padding="16dp"
+                android:textSize="16sp" />
 
         </LinearLayout>
 
     </ScrollView>
 
-    <!-- Next Button -->
+    <!-- Submit Button -->
     <Button
-        android:id="@+id/btnNext"
+        android:id="@+id/btnSubmit"
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_margin="24dp"
-        android:background="@drawable/button_primary"
-        android:text="Next"
+        android:background="@drawable/button_success"
+        android:text="@string/submit"
         android:textColor="@color/white"
         android:textSize="16sp"
         android:textStyle="bold"

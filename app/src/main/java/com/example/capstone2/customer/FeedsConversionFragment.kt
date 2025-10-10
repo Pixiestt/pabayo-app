@@ -8,6 +8,7 @@ import android.widget.Button
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.TextView
+import android.widget.EditText
 import androidx.fragment.app.Fragment
 import com.example.capstone2.R
 
@@ -16,9 +17,10 @@ class FeedsConversionFragment : Fragment() {
     private lateinit var radioGroupFeeds: RadioGroup
     private lateinit var radioFeedsYes: RadioButton
     private lateinit var radioFeedsNo: RadioButton
-    private lateinit var btnNext: Button
+    private lateinit var btnSubmit: Button
     private lateinit var tvStepProgress: TextView
-    
+    private lateinit var etComment: EditText
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -33,46 +35,53 @@ class FeedsConversionFragment : Fragment() {
         radioGroupFeeds = view.findViewById(R.id.radioGroupFeeds)
         radioFeedsYes = view.findViewById(R.id.radioFeedsYes)
         radioFeedsNo = view.findViewById(R.id.radioFeedsNo)
-        btnNext = view.findViewById(R.id.btnNext)
+        btnSubmit = view.findViewById(R.id.btnSubmit)
         tvStepProgress = view.findViewById(R.id.tvStepProgress)
-        
-        val activity = requireActivity() as RequestWizardActivity
-        tvStepProgress.text = "4/5"
+        etComment = view.findViewById(R.id.etComment)
 
-        // Initially disable Next until user explicitly chooses Yes or No
-        btnNext.isEnabled = false
-        btnNext.alpha = 0.5f
+        val activity = requireActivity() as RequestWizardActivity
+        tvStepProgress.text = "4/4"
+
+        // Initially disable Submit until user explicitly chooses Yes or No
+        btnSubmit.isEnabled = false
+        btnSubmit.alpha = 0.5f
 
         // Prefill from wizard data only if already set (e.g., editing an existing request)
         val wizard = activity.getWizardData()
         if (wizard.feedsConversion != null) {
             val isChecked = wizard.feedsConversion == true
             if (isChecked) radioFeedsYes.isChecked = true else radioFeedsNo.isChecked = true
-            // enable Next because a choice exists
-            btnNext.isEnabled = true
-            btnNext.alpha = 1.0f
+            // enable Submit because a choice exists
+            btnSubmit.isEnabled = true
+            btnSubmit.alpha = 1.0f
         }
 
-        // Set up radio group listener: enable Next and write choice into wizard data
+        // Prefill comment if present
+        wizard.comment?.let { etComment.setText(it) }
+
+        // Set up radio group listener: enable Submit and write choice into wizard data
         radioGroupFeeds.setOnCheckedChangeListener { _, checkedId ->
             val selected = when (checkedId) {
                 R.id.radioFeedsYes -> true
                 R.id.radioFeedsNo -> false
                 else -> null
             }
-            // only enable Next when a valid selection (Yes/No) is made
+            // only enable Submit when a valid selection (Yes/No) is made
             if (selected != null) {
                 activity.getWizardData().feedsConversion = selected
-                btnNext.isEnabled = true
-                btnNext.alpha = 1.0f
+                btnSubmit.isEnabled = true
+                btnSubmit.alpha = 1.0f
             } else {
-                btnNext.isEnabled = false
-                btnNext.alpha = 0.5f
+                btnSubmit.isEnabled = false
+                btnSubmit.alpha = 0.5f
             }
         }
         
-        btnNext.setOnClickListener {
-            activity.goToNextStep()
+        btnSubmit.setOnClickListener {
+            // Save optional comment into wizard data
+            activity.getWizardData().comment = etComment.text.toString().trim()
+            // Final step: submit the request
+            activity.submitRequest()
         }
     }
 }
