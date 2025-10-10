@@ -72,7 +72,7 @@ class PickupServiceFragment : Fragment() {
         userViewModel.getProfile().observe(viewLifecycleOwner) { user ->
             if (user != null) {
                 // user.homeAddress is non-null in this project model
-                savedHomeAddress = user.homeAddress
+                savedHomeAddress = user.homeAddress ?: ""
 
                 // If wizard had the same address previously selected, reflect that in the checkbox
                 val wizard = activity.getWizardData()

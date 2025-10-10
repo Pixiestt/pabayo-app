@@ -103,6 +103,11 @@ class CustomerTrackAdapter(
         val btnClose: Button = dialog.findViewById(R.id.btnClose)
         val btnEdit: Button = dialog.findViewById(R.id.btnEdit)
         val btnMessage: Button? = dialog.findViewById(R.id.btnMessage)
+        val btnViewProfile: Button? = dialog.findViewById(R.id.btnViewProfile)
+        // New contact controls
+        val tvDetailContact: TextView? = dialog.findViewById(R.id.tvDetailContact)
+        val btnCall: Button? = dialog.findViewById(R.id.btnCall)
+        val btnCopy: Button? = dialog.findViewById(R.id.btnCopy)
 
         // Use formatted string resources to populate the dialog
         tvDetailCustomerName.text = context.getString(R.string.customer_format, request.customerName)
@@ -142,6 +147,48 @@ class CustomerTrackAdapter(
 
         tvDetailComment.text = context.getString(R.string.comment_format, request.comment ?: "None")
         tvDetailSubmittedAt.text = context.getString(R.string.submitted_at_format, request.submittedAt ?: "Unknown")
+
+        // Contact handling: show contact row and Call/Copy when available
+        fun showContact(contact: String?) {
+            if (tvDetailContact == null) return
+            if (contact.isNullOrBlank()) {
+                tvDetailContact.visibility = View.GONE
+                btnCall?.visibility = View.GONE
+                btnCopy?.visibility = View.GONE
+            } else {
+                tvDetailContact.visibility = View.VISIBLE
+                tvDetailContact.text = "Contact number: $contact"
+                btnCall?.visibility = View.VISIBLE
+                btnCopy?.visibility = View.VISIBLE
+            }
+        }
+
+        // Wire Call/Copy buttons
+        btnCall?.setOnClickListener {
+            val phone = request.contactNumber
+            if (!phone.isNullOrBlank()) {
+                try {
+                    val dial = android.content.Intent(android.content.Intent.ACTION_DIAL)
+                    dial.data = android.net.Uri.parse("tel:$phone")
+                    context.startActivity(dial)
+                } catch (_: Exception) { android.widget.Toast.makeText(context, "Cannot start dialer", android.widget.Toast.LENGTH_SHORT).show() }
+            }
+        }
+
+        btnCopy?.setOnClickListener {
+            val phone = request.contactNumber
+            if (!phone.isNullOrBlank()) {
+                try {
+                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    val clip = android.content.ClipData.newPlainText("contact", phone)
+                    clipboard.setPrimaryClip(clip)
+                    android.widget.Toast.makeText(context, "Contact copied", android.widget.Toast.LENGTH_SHORT).show()
+                } catch (_: Exception) { android.widget.Toast.makeText(context, "Cannot copy", android.widget.Toast.LENGTH_SHORT).show() }
+            }
+        }
+
+        // Initially show contact if available
+        showContact(request.contactNumber)
 
         // Compute a progress percentage based on statusID and set progress bar + label
         val progress = when (request.statusID) {
@@ -211,6 +258,20 @@ class CustomerTrackAdapter(
 
         btnClose.setOnClickListener {
             dialog.dismiss()
+        }
+
+        // Wire the View Profile button so customer can open the profile screen
+        btnViewProfile?.let { btn ->
+            btn.visibility = View.VISIBLE
+            btn.setOnClickListener {
+                try {
+                    val ctx = context
+                    val intent = android.content.Intent(ctx, com.example.capstone2.user.ViewUserProfileActivity::class.java)
+                    intent.putExtra("userId", request.customerID)
+                    dialog.dismiss()
+                    ctx.startActivity(intent)
+                } catch (_: Exception) { dialog.dismiss() }
+            }
         }
 
         dialog.show()

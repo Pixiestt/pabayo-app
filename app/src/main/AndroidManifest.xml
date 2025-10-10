@@ -50,6 +50,10 @@
         <activity
             android:name=".customer.RequestWizardActivity"
             android:exported="false" />
+        <activity
+            android:name=".user.ViewUserProfileActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

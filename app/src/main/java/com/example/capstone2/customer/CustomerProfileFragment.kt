@@ -72,11 +72,12 @@ class CustomerProfileFragment : Fragment(R.layout.fragment_customer_profile) {
     private fun observeProfile() {
         userViewModel.getProfile().observe(viewLifecycleOwner) { user ->
             if (user != null) {
-                firstNameET.setText(user.firstName)
-                lastNameET.setText(user.lastName)
-                emailTV.text = user.emailAddress
-                contactET.setText(user.contactNumber)
-                addressET.setText(user.homeAddress)
+                // Guard against nullable user fields coming from the model
+                firstNameET.setText(user.firstName ?: "")
+                lastNameET.setText(user.lastName ?: "")
+                emailTV.text = user.emailAddress ?: ""
+                contactET.setText(user.contactNumber ?: "")
+                addressET.setText(user.homeAddress ?: "")
             } else {
                 Toast.makeText(requireContext(), "Failed to load profile", Toast.LENGTH_SHORT).show()
             }

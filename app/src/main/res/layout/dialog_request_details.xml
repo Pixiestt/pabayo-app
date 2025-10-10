@@ -78,6 +78,56 @@
             android:text="@string/label_submitted_at"
             android:layout_marginTop="8dp" />
 
+        <!-- Contact row: visible when contact info is known or loading -->
+        <TextView
+            android:id="@+id/tvDetailContact"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Contact number: Loading..."
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            android:textStyle="bold" />
+
+        <!-- small row of action buttons related to contact -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btnCall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Call"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btnCopy"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Copy"
+                android:layout_marginStart="8dp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btnMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Message"
+                android:layout_marginStart="8dp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btnViewProfile"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="View profile"
+                android:layout_marginStart="8dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
         <!-- Progress label and bar -->
         <TextView
             android:id="@+id/tvDetailProgressLabel"
@@ -103,16 +153,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Edit"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="12dp"
-            android:visibility="gone" />
-
-        <!-- Message button to start 1:1 chat between owner and customer -->
-        <Button
-            android:id="@+id/btnMessage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Message"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="12dp"
             android:visibility="gone" />

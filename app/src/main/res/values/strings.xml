@@ -99,6 +99,8 @@
     <string name="error_password_mismatch">Passwords do not match</string>
     <string name="error_old_password_required">Please enter your current password</string>
     <string name="not_set">Not set</string>
+    <string name="not_available">Not available</string>
+    <string name="server_returned_raw">Server returned raw: %1$s</string>
 
     <!-- Labels used in owner track item layout -->
     <string name="rb_delivery_boy_pickup">Delivery Boy Pickup</string>
