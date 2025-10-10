@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "348784892395",
+    "project_id": "pabayo",
+    "storage_bucket": "pabayo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:348784892395:android:9a012eb672a6d49f6361ae",
+        "android_client_info": {
+          "package_name": "com.example.capstone"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAy2sTKX03gel7apnTs_6jAgGthloj3yWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

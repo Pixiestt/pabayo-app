@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Color used for notification accent (fallback for FCM notifications) -->
+    <color name="notification_color">#FF4081</color>
+</resources>
+

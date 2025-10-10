@@ -7,22 +7,47 @@
     android:padding="4dp">
 
     <!-- Left placeholder to keep received bubbles away from the edge and avoid overlapping title -->
-    <View
-        android:id="@+id/leftPlaceholderReceived"
-        android:layout_width="@dimen/received_left_placeholder_width"
-        android:layout_height="wrap_content" />
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="top|start"
+        android:layout_marginEnd="8dp">
+
+        <View
+            android:id="@+id/leftPlaceholderReceived"
+            android:layout_width="@dimen/received_left_placeholder_width"
+            android:layout_height="wrap_content" />
+
+        <!-- Sender name for received messages -->
+        <TextView
+            android:id="@+id/tvSenderNameReceived"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/received_bubble_margin_start"
+            android:layout_marginEnd="80dp"
+            android:textColor="#333333"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:paddingStart="12dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:paddingEnd="4dp"
+            android:visibility="visible" />
+
+    </LinearLayout>
 
     <!-- Bubble column (message) -->
     <LinearLayout
         android:id="@+id/messageBubbleReceived"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/received_bubble_margin_start"
-        android:layout_marginEnd="80dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="72dp"
         android:layout_gravity="start"
         android:background="@drawable/bg_message_received"
         android:maxWidth="280dp"
-        android:padding="12dp"
+        android:padding="8dp"
         android:orientation="vertical">
 
         <TextView

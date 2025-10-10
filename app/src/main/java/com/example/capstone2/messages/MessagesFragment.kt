@@ -5,8 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import android.util.Log
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,14 +21,9 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.launch
-import android.util.Log
 import java.io.File
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.widget.ScrollView
-import android.content.pm.ApplicationInfo
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
 
@@ -42,13 +36,6 @@ class MessagesFragment : Fragment() {
 
     companion object {
         private const val TAG = "MessagesFragment"
-    }
-
-    // Runtime check for whether the app is debuggable (avoids referencing BuildConfig)
-    private fun isDebug(): Boolean {
-        return try {
-            (requireContext().applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        } catch (_: Exception) { false }
     }
 
     // Reusable timestamp parser for this fragment
@@ -125,8 +112,17 @@ class MessagesFragment : Fragment() {
                     } catch (_: Exception) { }
                 }
             }
-            requireContext().registerReceiver(previewReceiver, IntentFilter("com.example.capstone2.NEW_MESSAGE_PREVIEW"))
-        } catch (_: Exception) { }
+            // Register receiver; on Android 13+ explicitly mark as not exported for app-internal broadcasts
+            val filter = IntentFilter("com.example.capstone2.NEW_MESSAGE_PREVIEW")
+            // Register receiver. Use the non-flags overload on older devices and the
+            // API-33 flag-based overload when available to mark the receiver as not exported.
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                requireContext().registerReceiver(previewReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                @Suppress("DEPRECATION")
+                requireContext().registerReceiver(previewReceiver, filter)
+            }
+         } catch (_: Exception) { }
 
         loadConversations()
 
@@ -454,7 +450,7 @@ class MessagesFragment : Fragment() {
                         val finalList: List<Conversation> = try {
                             val merged = deduped.map { conv ->
                                 try {
-                                    val preview = com.example.capstone2.repository.SharedPrefManager.getConversationPreview(requireContext(), conv.partnerID)
+                                    val preview = SharedPrefManager.getConversationPreview(requireContext(), conv.partnerID)
                                     if (preview != null) {
                                         val serverTime = parseTimeToMillis(conv.lastMessageAt)
                                         val previewTime = parseTimeToMillis(preview.lastMessageAt)
@@ -498,13 +494,15 @@ class MessagesFragment : Fragment() {
                                         if (uresp.isSuccessful) {
                                             val user = uresp.body()
                                             if (user != null) {
-                                                val display = listOfNotNull(user.firstName.takeIf { it.isNotBlank() }, user.lastName.takeIf { it.isNotBlank() }).joinToString(" ").ifBlank { user.emailAddress }
-                                                if (display.isNotBlank()) return display
+                                                val display = listOfNotNull(user.firstName?.takeIf { it.isNotBlank() }, user.lastName?.takeIf { it.isNotBlank() })
+                                                    .joinToString(" ")
+                                                    .ifBlank { user.emailAddress ?: "" }
+                                                 if (display.isNotBlank()) return display
+                                                }
                                             }
+                                        } catch (_: Exception) {
+                                            // typed endpoint may not exist or fail; continue to raw attempts
                                         }
-                                    } catch (_: Exception) {
-                                        // typed endpoint may not exist or fail; continue to raw attempts
-                                    }
 
                                     // Candidate raw endpoints relative to base URL — try them in order
                                     val candidates = listOf(

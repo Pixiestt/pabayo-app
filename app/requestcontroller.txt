@@ -1,0 +1,671 @@
+<?php
+
+namespace App\Http\Controllers\API;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use App\Models\Request as RequestModel;
+use App\Models\Payment;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+
+use Pusher\PushNotifications\PushNotifications;
+
+class RequestController extends Controller
+{
+    public function store(Request $request)
+    {
+        Log::info('➡️ Reached store() method');
+        Log::info('📝 Incoming payload:', $request->all());
+
+        try {
+            $validated = $request->validate([
+                'ownerID'       => 'required|exists:users_tbl,userID',
+                'customerID'    => 'required|exists:users_tbl,userID',
+                'serviceID'     => 'required|exists:services_tbl,serviceID',
+                'statusID'      => 'required|exists:status_tbl,statusID',
+                'pickupDate'    => 'nullable|string',
+                'deliveryDate'  => 'nullable|string',
+                'sackQuantity'  => 'nullable|integer',
+                'comment'       => 'nullable|string|max:300',
+                'modeID'        => 'required|exists:paymentmethods_tbl,modeID',
+                'pickupLocation' => 'nullable|string|max:255',
+                'deliveryLocation' => 'nullable|string|max:255',
+            ]);
+
+            // Parse dates if provided
+            if (!empty($validated['pickupDate'])) {
+                $validated['pickupDate'] = \Carbon\Carbon::parse($validated['pickupDate'])->format('Y-m-d');
+            }
+
+            if (!empty($validated['deliveryDate'])) {
+                $validated['deliveryDate'] = \Carbon\Carbon::createFromFormat('m/d/Y', $validated['deliveryDate'])->format('Y-m-d');
+            }
+
+
+            $validated['courierID'] = 1;
+
+            Log::info('🧪 Final payload to insert:', $validated);
+
+            // Create the request (remove modeID from $validated before saving)
+            $modeID = $validated['modeID'];
+            unset($validated['modeID']);
+            $newRequest = RequestModel::create($validated);
+            $newRequest->pickupLocation = $request->input('pickupLocation');
+            $newRequest->deliveryLocation = $request->input('deliveryLocation');
+            $newRequest->save();
+
+            // Always create a payment
+            $payment = \App\Models\Payment::create([
+                'requestID' => $newRequest->requestID,
+                'modeID' => $modeID,
+                'paymentStatusID' => 1, // e.g., "Pending"
+                'paymentDate' => now(),
+                'userID' => $validated['customerID'],
+                'amount' => 0,
+            ]);
+
+            // Reload with relationships for response
+            $newRequest = RequestModel::with(['customer', 'service', 'payment.method'])->find($newRequest->requestID);
+
+            $firstName = $newRequest->customer->firstName ?? '';
+            $lastName = $newRequest->customer->lastName ?? '';
+            $fullName = trim("$firstName $lastName");
+
+            $serviceName = $newRequest->service->serviceName ?? 'Unknown';
+            if ($newRequest->serviceID == 1) {
+                $serviceName = 'All Services';
+            }
+
+            $paymentName = $newRequest->payment->method->modeName ?? 'Unspecified';
+            if ($newRequest->payment && $newRequest->payment->modeID == 1) {
+                $paymentName = 'Cash on Delivery';
+            } elseif ($newRequest->payment && $newRequest->payment->modeID == 2) {
+                $paymentName = 'Gcash';
+            }
+
+
+            // Send notification to the Owner about the new request using Pusher Beams
+            // Ensure ownerID is a string for Beams
+            $ownerId = $newRequest->ownerID;
+            $ownerUserIdString = (string)$ownerId;
+            $customerName = $fullName;
+
+            // Initialize Pusher Beams Client (Must be done inside the try block)
+            $beamsClient = new PushNotifications([
+                'instanceId' => env('PUSHER_BEAMS_INSTANCE_ID'),
+                'secretKey' => env('PUSHER_BEAMS_SECRET_KEY'),
+            ]);
+
+            try {
+                // Attempt to publish the notification to an interest named for the owner (mobile subscribes to "user_{id}")
+                $interest = "user_{$ownerUserIdString}";
+                $beamsClient->publishToInterests(
+                    [$interest], // Target the owner's interest
+                    [
+                        "fcm" => [
+                            "notification" => [
+                                "title" => "New Request from $customerName",
+                                "body" => "A new request (ID: {$newRequest->requestID}) is awaiting your approval.",
+                            ],
+                            "data" => [
+                                "type" => "new_request",
+                                "request_id" => $newRequest->requestID,
+                            ]
+                        ],
+                        // Add 'apns' for iOS here if needed
+                    ]
+                );
+                Log::info("✅ Pusher Beams: Notified Owner $ownerId about new request {$newRequest->requestID}.");
+            } catch (\Exception $e) {
+                // Log the error but DO NOT re-throw, as the request was successfully created
+                Log::error('❌ Pusher Beams Publish Error (New Request): ' . $e->getMessage());
+            }
+
+            $formatted = [
+                'requestID'       => $newRequest->requestID ?? 0,
+                'ownerID'         => $newRequest->ownerID ?? 0,
+                'customerID'      => $newRequest->customerID ?? 0,
+                'customerName'    => $fullName ?: '',
+                'serviceID'       => $newRequest->serviceID ?? 0,
+                'serviceName'     => $serviceName ?: '',
+                'courierID'       => $newRequest->courierID ?? 0,
+                'statusID'        => $newRequest->statusID ?? 0,
+                'pickupDate'      => $newRequest->pickupDate ?? '',
+                'paymentMethod'   => $paymentName ?: '',
+                'deliveryDate'    => $newRequest->deliveryDate ?? '',
+                'sackQuantity'    => $newRequest->sackQuantity ?? 0,
+                'comment'         => $newRequest->comment ?? '',
+                'dateUpdated'     => $newRequest->dateUpdated ?? '',
+                'schedule'        => $newRequest->pickupDate ?? '',
+                'submittedAt'     => $newRequest->dateCreated ?? ($newRequest->created_at ? $newRequest->created_at->toDateString() : ''),
+                'pickupLocation'  => $newRequest->pickupLocation ?? '',  // Add this line
+                'deliveryLocation' => $newRequest->deliveryLocation ?? '', // Add this line
+            ];
+
+            return response()->json([
+                'message' => 'Request created successfully',
+                'data' => $formatted
+            ], 201);
+        } catch (\Throwable $e) {
+            Log::error('Request creation failed: ' . $e->getMessage());
+            Log::error('Trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'error' => 'Failed to create request',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
+    // eto yung pinaste ko about sa edit
+
+
+
+    /**
+     * Update an existing request (editable only when statusID == 1 "Subject for approval")
+     * PUT /api/requests/{id}
+     */
+    public function update(Request $request, $id)
+    {
+        Log::info('➡️ Reached update() method for requestID: ' . $id);
+        Log::info('📝 Incoming payload for update:', $request->all());
+
+        try {
+            // Validate incoming data (similar to store)
+            $validated = $request->validate([
+                'ownerID'        => 'required|exists:users_tbl,userID',
+                'customerID'     => 'required|exists:users_tbl,userID',
+                'serviceID'      => 'required|exists:services_tbl,serviceID',
+                'statusID'       => 'required|exists:status_tbl,statusID',
+                'courierID'      => 'nullable|integer',
+                'pickupDate'     => 'nullable|string',
+                'deliveryDate'   => 'nullable|string',
+                'sackQuantity'   => 'nullable|integer',
+                'comment'        => 'nullable|string|max:300',
+                'modeID'         => 'nullable|exists:paymentmethods_tbl,modeID',
+                'pickupLocation' => 'nullable|string|max:255',
+                'deliveryLocation' => 'nullable|string|max:255',
+            ]);
+
+            // Find existing request
+            $requestModel = RequestModel::find($id);
+            if (!$requestModel) {
+                Log::warning('Request not found: ' . $id);
+                return response()->json(['message' => 'Request not found'], 404);
+            }
+
+            // Only allow editing if status is subject-for-approval (1)
+            if ((int)$requestModel->statusID !== 1) {
+                Log::warning('Attempt to edit non-editable requestID=' . $id . ' status=' . $requestModel->statusID);
+                return response()->json(['message' => 'Request can no longer be edited'], 409);
+            }
+
+            // Ensure authenticated user is the request owner/customer
+            $user = $request->user();
+            if ($user && isset($user->userID) && (int)$user->userID !== (int)$requestModel->customerID) {
+                Log::warning('Forbidden update attempt by user ' . ($user->userID ?? 'unknown') . ' on request ' . $id);
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
+
+            // Parse dates if provided (normalize to Y-m-d)
+            if (!empty($validated['pickupDate'])) {
+                $validated['pickupDate'] = \Carbon\Carbon::parse($validated['pickupDate'])->format('Y-m-d');
+            }
+            if (!empty($validated['deliveryDate'])) {
+                try {
+                    $validated['deliveryDate'] = \Carbon\Carbon::parse($validated['deliveryDate'])->format('Y-m-d');
+                } catch (\Exception $ex) {
+                    $validated['deliveryDate'] = \Carbon\Carbon::createFromFormat('m/d/Y', $validated['deliveryDate'])->format('Y-m-d');
+                }
+            }
+
+            // Update allowed fields
+            $requestModel->ownerID = $validated['ownerID'] ?? $requestModel->ownerID;
+            $requestModel->serviceID = $validated['serviceID'] ?? $requestModel->serviceID;
+            $requestModel->courierID = $validated['courierID'] ?? ($requestModel->courierID ?? 1);
+            $requestModel->statusID = $validated['statusID'] ?? $requestModel->statusID;
+            $requestModel->pickupDate = array_key_exists('pickupDate', $validated) ? $validated['pickupDate'] : $requestModel->pickupDate;
+            $requestModel->deliveryDate = array_key_exists('deliveryDate', $validated) ? $validated['deliveryDate'] : $requestModel->deliveryDate;
+            $requestModel->sackQuantity = $validated['sackQuantity'] ?? $requestModel->sackQuantity;
+            $requestModel->comment = $validated['comment'] ?? $requestModel->comment;
+            $requestModel->pickupLocation = $validated['pickupLocation'] ?? $requestModel->pickupLocation;
+            $requestModel->deliveryLocation = $validated['deliveryLocation'] ?? $requestModel->deliveryLocation;
+            $requestModel->dateUpdated = now();
+
+            $requestModel->save();
+
+            // If modeID provided, update payment method for the existing payment record (optional)
+            if (!empty($validated['modeID'])) {
+                $payment = \App\Models\Payment::where('requestID', $requestModel->requestID)->first();
+                if ($payment) {
+                    $payment->modeID = $validated['modeID'];
+                    $payment->save();
+                }
+            }
+
+            // Reload with relationships
+            $requestModel = RequestModel::with(['customer', 'service', 'payment.method'])->find($requestModel->requestID);
+
+            $firstName = $requestModel->customer->firstName ?? '';
+            $lastName  = $requestModel->customer->lastName ?? '';
+            $fullName  = trim("$firstName $lastName");
+
+            $serviceName = $requestModel->service->serviceName ?? 'Unknown';
+            if ($requestModel->serviceID == 1) {
+                $serviceName = 'All Services';
+            }
+
+            $paymentName = $requestModel->payment->method->modeName ?? 'Unspecified';
+            if ($requestModel->payment && $requestModel->payment->modeID == 1) {
+                $paymentName = 'Cash on Delivery';
+            } elseif ($requestModel->payment && $requestModel->payment->modeID == 2) {
+                $paymentName = 'Gcash';
+            }
+
+            $formatted = [
+                'requestID'        => $requestModel->requestID ?? 0,
+                'ownerID'          => $requestModel->ownerID ?? 0,
+                'customerID'       => $requestModel->customerID ?? 0,
+                'customerName'     => $fullName ?: '',
+                'serviceID'        => $requestModel->serviceID ?? 0,
+                'serviceName'      => $serviceName ?: '',
+                'courierID'        => $requestModel->courierID ?? 0,
+                'statusID'         => $requestModel->statusID ?? 0,
+                'pickupDate'       => $requestModel->pickupDate ?? '',
+                'paymentMethod'    => $paymentName ?: '',
+                'deliveryDate'     => $requestModel->deliveryDate ?? '',
+                'sackQuantity'     => $requestModel->sackQuantity ?? 0,
+                'comment'          => $requestModel->comment ?? '',
+                'dateUpdated'      => $requestModel->dateUpdated ?? '',
+                'schedule'         => $requestModel->pickupDate ?? '',
+                'submittedAt'      => $requestModel->dateCreated ?? ($requestModel->created_at ? $requestModel->created_at->toDateString() : ''),
+                'pickupLocation'   => $requestModel->pickupLocation ?? '',
+                'deliveryLocation' => $requestModel->deliveryLocation ?? '',
+                // Optional fields - include if present on model
+                'feedsConversion'  => $requestModel->feedsConversion ?? false,
+                'millingType'      => $requestModel->millingType ?? null,
+            ];
+
+            return response()->json([
+                'message' => 'Request updated successfully',
+                'data' => $formatted
+            ], 200);
+        } catch (\Throwable $e) {
+            Log::error('Request update failed for id ' . $id . ': ' . $e->getMessage());
+            Log::error('Trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'error' => 'Failed to update request',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // hanggang dito yung pasted
+
+
+
+
+
+
+
+
+
+
+    public function index(Request $request)
+    {
+        $ownerID = $request->user()->userID;
+
+        $requests = RequestModel::with(['customer', 'service', 'payment.method'])
+            ->where('ownerID', $ownerID)
+            ->get();
+
+        foreach ($requests as $req) {
+            Log::info('Customer:', $req->customer ? $req->customer->toArray() : 'null');
+            Log::info('Service:', $req->service ? $req->service->toArray() : 'null');
+        }
+
+        $formatted = $requests->map(function ($req) {
+            $firstName = $req->customer->firstName ?? '';
+            $lastName = $req->customer->lastName ?? '';
+            $fullName = trim("$firstName $lastName");
+
+            $serviceName = $req->service->serviceName ?? 'Unknown';
+            if ($req->serviceID == 1) {
+                $serviceName = 'All Services';
+            }
+
+            $paymentName = $req->payment->method->modeName ?? 'Unspecified';
+            if ($req->payment && $req->payment->modeID == 1) {
+                $paymentName = 'Cash on Delivery';
+            } elseif ($req->payment && $req->payment->modeID == 2) {
+                $paymentName = 'Gcash';
+            }
+
+            return [
+                'requestID'       => $req->requestID,
+                'customerName'    => $fullName ?: 'Unknown',
+                'sackQuantity'    => $req->sackQuantity,
+                'serviceName'     => $serviceName,
+                'schedule'        => $req->pickupDate ?? 'Not set',
+                'paymentMethod'   => $paymentName,
+                'comment'         => $req->comment,
+                'submittedAt'     => $req->dateCreated ?? $req->created_at?->toDateString(),
+            ];
+        });
+
+        return response()->json(['requests' => $formatted]);
+    }
+
+    public function ownerRequests(Request $request)
+    {
+        $user = $request->user();
+
+        $requests = RequestModel::with(['customer', 'service', 'payment.method'])
+            ->whereHas('service', function ($query) use ($user) {
+                $query->where('ownerID', $user->userID);
+            })->get();
+
+        // Format the response to include customerName and other fields
+        $formatted = $requests->map(function ($req) {
+            $firstName = $req->customer->firstName ?? '';
+            $lastName = $req->customer->lastName ?? '';
+            $fullName = trim("$firstName $lastName");
+
+            $serviceName = $req->service->serviceName ?? 'Unknown';
+            if ($req->serviceID == 1) {
+                $serviceName = 'All Services';
+            }
+
+            $paymentName = $req->payment->method->modeName ?? 'Unspecified';
+            if ($req->payment && $req->payment->modeID == 1) {
+                $paymentName = 'Cash on Delivery';
+            } elseif ($req->payment && $req->payment->modeID == 2) {
+                $paymentName = 'Gcash';
+            }
+
+            return [
+                'requestID'       => $req->requestID,
+                'ownerID'         => $req->ownerID,
+                'customerID'      => $req->customerID,
+                'customerName'    => $fullName ?: 'Unknown',
+                'serviceID'       => $req->serviceID,
+                'serviceName'     => $serviceName,
+                'courierID'       => $req->courierID,
+                'statusID'        => $req->statusID,
+                'pickupDate'      => $req->pickupDate,
+                'paymentMethod'   => $paymentName,
+                'deliveryDate'    => $req->deliveryDate,
+                'sackQuantity'    => $req->sackQuantity,
+                'comment'         => $req->comment,
+                'dateUpdated'     => $req->dateUpdated,
+                'schedule'        => $req->pickupDate ?? 'Not set',
+                'submittedAt'     => $req->dateCreated ?? $req->created_at?->toDateString(),
+                'pickupLocation'  => $req->pickupLocation ?? '',
+                'deliveryLocation' => $req->deliveryLocation ?? '',
+            ];
+        });
+
+        return response()->json([
+            'requests' => $formatted
+        ]);
+    }
+
+    public function accept($id)
+    {
+        $requestModel = RequestModel::with(['customer', 'service', 'payment.method'])->find($id);
+
+        if (!$requestModel) {
+            return response()->json(['message' => 'Request not found'], 404);
+        }
+
+        $requestModel->statusID = 10; // 🔁 Adjust this ID based on your 'accepted' status in status_tbl
+        $requestModel->dateUpdated = now();
+        $requestModel->save();
+
+        // Format the updated request as in the list endpoints
+        $firstName = $requestModel->customer->firstName ?? '';
+        $lastName = $requestModel->customer->lastName ?? '';
+        $fullName = trim("$firstName $lastName");
+
+        $serviceName = $requestModel->service->serviceName ?? 'Unknown';
+        if ($requestModel->serviceID == 1) {
+            $serviceName = 'All Services';
+        }
+
+        $paymentName = $requestModel->payment->method->modeName ?? 'Unspecified';
+        if ($requestModel->payment && $requestModel->payment->modeID == 1) {
+            $paymentName = 'Cash on Delivery';
+        } elseif ($requestModel->payment && $requestModel->payment->modeID == 2) {
+            $paymentName = 'Gcash';
+        }
+
+
+        $requestModel->statusID = 10;
+        $requestModel->dateUpdated = now();
+        $requestModel->save(); 
+
+
+        // ------------------------------------------------------------------------------------
+        // PUSHER BEAMS: Notify the Customer that their request was accepted
+        // ------------------------------------------------------------------------------------
+        $customerId = $requestModel->customerID;
+        $customerIdString = (string)$customerId;
+        $beamsClient = new PushNotifications([
+            'instanceId' => env('PUSHER_BEAMS_INSTANCE_ID'),
+            'secretKey' => env('PUSHER_BEAMS_SECRET_KEY'),
+        ]);
+
+        try {
+            // Attempt to publish the notification to an interest named for the customer (mobile subscribes to "user_{id}")
+            $interest = "user_{$customerIdString}";
+            $beamsClient->publishToInterests(
+                [$interest], // Target the customer's interest
+                [
+                    "fcm" => [
+                        "notification" => [
+                            "title" => "Request Accepted! 🎉",
+                            "body" => "Your service request (ID: {$requestModel->requestID}) has been accepted by the owner.",
+                        ],
+                        "data" => [
+                            "type" => "request_accepted",
+                            "request_id" => $requestModel->requestID,
+                        ]
+                    ],
+                    // Add 'apns' for iOS here if needed
+                ]
+            );
+            Log::info("✅ Pusher Beams: Notified Customer $customerId about accepted request {$requestModel->requestID}.");
+        } catch (\Exception $e) {
+            // Log the error but DO NOT re-throw, as the request was successfully updated
+            Log::error('❌ Pusher Beams Publish Error (Request Accepted): ' . $e->getMessage());
+        }
+
+
+
+        
+
+        $formatted = [
+            'requestID'       => $requestModel->requestID ?? 0,
+            'ownerID'         => $requestModel->ownerID ?? 0,
+            'customerID'      => $requestModel->customerID ?? 0,
+            'customerName'    => $fullName ?: '',
+            'serviceID'       => $requestModel->serviceID ?? 0,
+            'serviceName'     => $serviceName ?: '',
+            'courierID'       => $requestModel->courierID ?? 0,
+            'statusID'        => $requestModel->statusID ?? 0,
+            'pickupDate'      => $requestModel->pickupDate ?? '',
+            'paymentMethod'   => $paymentName ?: '',
+            'deliveryDate'    => $requestModel->deliveryDate ?? '',
+            'sackQuantity'    => $requestModel->sackQuantity ?? 0,
+            'comment'         => $requestModel->comment ?? '',
+            'dateUpdated'     => $requestModel->dateUpdated ?? '',
+            'schedule'        => $requestModel->pickupDate ?? '',
+            'submittedAt'     => $requestModel->dateCreated ?? ($requestModel->created_at ? $requestModel->created_at->toDateString() : ''),
+            'pickupLocation'  => $requestModel->pickupLocation ?? '',  // Add this line
+            'deliveryLocation' => $requestModel->deliveryLocation ?? '', // Add this line
+
+        ];
+
+        return response()->json([
+            'message' => 'Request accepted successfully',
+            'data' => $formatted,
+        ]);
+    }
+
+    public function reject($id)
+    {
+        $request = RequestModel::find($id);
+
+        if (!$request) {
+            return response()->json(['message' => 'Request not found'], 404);
+        }
+
+        $request->statusID = 9; // 🔁 Adjust this ID based on your 'rejected' status in status_tbl
+        $request->save();
+
+        return response()->json(['message' => 'Request rejected successfully'], 200);
+    }
+
+    public function updateRequestStatus($id, $status)
+    {
+        $requestModel = RequestModel::with(['customer', 'service', 'payment.method'])->find($id);
+
+        if (!$requestModel) {
+            return response()->json(['message' => 'Request not found'], 404);
+        }
+
+        // Validate statusID exists in status_tbl
+        $statusExists = \DB::table('status_tbl')->where('statusID', $status)->exists();
+        if (!$statusExists) {
+            return response()->json(['message' => 'Invalid statusID'], 422);
+        }
+
+        $requestModel->statusID = $status;
+        $requestModel->dateUpdated = now();
+        $requestModel->save();
+
+        // Format the updated request as in the list endpoints
+        $firstName = $requestModel->customer->firstName ?? '';
+        $lastName = $requestModel->customer->lastName ?? '';
+        $fullName = trim("$firstName $lastName");
+
+        $serviceName = $requestModel->service->serviceName ?? 'Unknown';
+        if ($requestModel->serviceID == 1) {
+            $serviceName = 'All Services';
+        }
+
+        $paymentName = $requestModel->payment->method->modeName ?? 'Unspecified';
+        if ($requestModel->payment && $requestModel->payment->modeID == 1) {
+            $paymentName = 'Cash on Delivery';
+        } elseif ($requestModel->payment && $requestModel->payment->modeID == 2) {
+            $paymentName = 'Gcash';
+        }
+
+        $formatted = [
+            'requestID'       => $requestModel->requestID ?? 0,
+            'ownerID'         => $requestModel->ownerID ?? 0,
+            'customerID'      => $requestModel->customerID ?? 0,
+            'customerName'    => $fullName ?: '',
+            'serviceID'       => $requestModel->serviceID ?? 0,
+            'serviceName'     => $serviceName ?: '',
+            'courierID'       => $requestModel->courierID ?? 0,
+            'statusID'        => $requestModel->statusID ?? 0,
+            'pickupDate'      => $requestModel->pickupDate ?? '',
+            'paymentMethod'   => $paymentName ?: '',
+            'deliveryDate'    => $requestModel->deliveryDate ?? '',
+            'sackQuantity'    => $requestModel->sackQuantity ?? 0,
+            'comment'         => $requestModel->comment ?? '',
+            'dateUpdated'     => $requestModel->dateUpdated ?? '',
+            'schedule'        => $requestModel->pickupDate ?? '',
+            'submittedAt'     => $requestModel->dateCreated ?? ($requestModel->created_at ? $requestModel->created_at->toDateString() : ''),
+            'pickupLocation'  => $requestModel->pickupLocation ?? '',  // Add this line
+            'deliveryLocation' => $requestModel->deliveryLocation ?? '', // Add this line
+        ];
+
+        return response()->json([
+            'message' => 'Status updated successfully',
+            'data' => $formatted,
+        ]);
+    }
+
+    public function getCustomerRequests($customerID)
+    {
+        try {
+            $requests = \App\Models\Request::with(['customer', 'service', 'payment.method'])
+                ->where('customerID', $customerID)
+                ->orderBy('dateCreated', 'desc')
+                ->get();
+
+            // Log for debugging
+            \Log::info("Fetching requests for customer ID: $customerID, found: " . $requests->count());
+
+            $formatted = $requests->map(function ($req) {
+                $firstName = $req->customer->firstName ?? '';
+                $lastName = $req->customer->lastName ?? '';
+                $fullName = trim("$firstName $lastName");
+
+                $serviceName = $req->service->serviceName ?? 'Unknown';
+                if ($req->serviceID == 1) {
+                    $serviceName = 'All Services';
+                }
+
+                $paymentName = $req->payment->method->modeName ?? 'Unspecified';
+                if ($req->payment && $req->payment->modeID == 1) {
+                    $paymentName = 'Cash on Delivery';
+                } elseif ($req->payment && $req->payment->modeID == 2) {
+                    $paymentName = 'Gcash';
+                }
+
+                return [
+                    'requestID' => $req->requestID,
+                    'ownerID' => $req->ownerID,
+                    'customerID' => $req->customerID,
+                    'customerName' => $fullName ?: 'Unknown',
+                    'serviceID' => $req->serviceID,
+                    'serviceName' => $serviceName,
+                    'courierID' => $req->courierID,
+                    'statusID' => $req->statusID,
+                    'pickupDate' => $req->pickupDate,
+                    'paymentMethod' => $paymentName,
+                    'deliveryDate' => $req->deliveryDate,
+                    'sackQuantity' => $req->sackQuantity,
+                    'comment' => $req->comment,
+                    'dateUpdated' => $req->dateUpdated,
+                    'schedule' => $req->pickupDate ?? 'Not set',
+                    'submittedAt' => $req->dateCreated ?? $req->created_at?->toDateString(),
+                    'pickupLocation' => $req->pickupLocation,  // Add this line
+                    'deliveryLocation' => $req->deliveryLocation,  // Add this line
+                ];
+            });
+
+            // Return the formatted requests directly as the expected array
+            return response()->json($formatted);
+        } catch (\Exception $e) {
+            \Log::error("Error fetching customer requests: " . $e->getMessage());
+            return response()->json([], 500);
+        }
+    }
+}

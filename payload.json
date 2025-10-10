@@ -1,0 +1,14 @@
+{
+  "interests": ["user_123"],
+  "fcm": {
+    "notification": {
+      "title": "Test notification",
+      "body": "This is a test sent to interest user_123"
+    },
+    "data": {
+      "type": "test",
+      "request_id": 999
+    }
+  }
+}
+

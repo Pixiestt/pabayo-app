@@ -1,17 +1,25 @@
 package com.example.capstone2.adapter
 
+import android.content.Intent
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.RecyclerView
 import com.example.capstone2.R
+import com.example.capstone2.user.ViewUserProfileActivity
 import com.example.capstone2.data.models.Request
 
 class TrackAdapter(
     private var requests: List<Request>,
-    private val onButtonClick: (Request, Int) -> Unit
+    private val onButtonClick: (Request, Int) -> Unit,
+    /**
+     * Callback to fetch a contact number for a given customerId. Should invoke onResult
+     * on the main thread with the resulting contact string (e.g. actual number or "Not available").
+     */
+    private val fetchContact: (customerId: Long, onResult: (String) -> Unit) -> Unit
 ) : RecyclerView.Adapter<TrackAdapter.TrackViewHolder>() {
 
     inner class TrackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -32,8 +40,7 @@ class TrackAdapter(
         val rbCPickup = itemView.findViewById<RadioButton>(R.id.rbCPickup)
 
         val btnSubmit = itemView.findViewById<Button>(R.id.btnSubmit)
-        // More button we added to show extra details (use ImageButton to match layout)
-        val btnMore = itemView.findViewById<android.widget.ImageButton>(R.id.btnMore)
+        val btnMore = itemView.findViewById<ImageButton>(R.id.btnMore)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TrackViewHolder {
@@ -44,32 +51,34 @@ class TrackAdapter(
     override fun onBindViewHolder(holder: TrackViewHolder, position: Int) {
         val req = requests[position]
         val ctx = holder.itemView.context
+
         holder.customerName.text = req.customerName
         holder.tvSackQty.text = ctx.getString(R.string.sacks_format, req.sackQuantity)
         holder.tvServices.text = ctx.getString(R.string.services_format, req.serviceName)
-        // Owner track should display the shorter label 'Schedule:' per request
-        holder.tvSchedule.text = ctx.getString(R.string.schedule_format_owner, req.schedule ?: ctx.getString(R.string.not_set))
+        holder.tvSchedule.text = ctx.getString(
+            R.string.schedule_format_owner,
+            req.schedule ?: ctx.getString(R.string.not_set)
+        )
 
-        // Pickup location is shown in the More dialog only; hide it in the item view
+        // Hide locations in item row (shown in More dialog)
         holder.tvPickupLocation.visibility = View.GONE
-
-        // Delivery location is shown in the More dialog only; hide it in the item view
         holder.tvDeliveryLocation.visibility = View.GONE
 
-        // Set current status text
-        val currentStatusText = getStatusText(req.statusID.toInt())
+        // Current status text and color
+        val currentStatusText = getStatusText(req.statusID)
         holder.tvCurrentStatus.text = ctx.getString(R.string.status_format, currentStatusText)
 
-        // Set a color based on status
-        val statusColor = when(req.statusID.toInt()) {
-            10 -> "#4CAF50" // Green for accepted
-            2, 3 -> "#FF9800" // Orange for pickup/dropoff
-            4 -> "#2196F3" // Blue for pending
-            5 -> "#9C27B0" // Purple for processing
-            6, 7 -> "#FF5722" // Deep orange for delivery/pickup
-            else -> "#3F51B5" // Indigo default
+        val statusColor = when (req.statusID) {
+            10 -> "#4CAF50"
+            2, 3 -> "#FF9800"
+            4 -> "#2196F3"
+            5 -> "#9C27B0"
+            6, 7 -> "#FF5722"
+            else -> "#3F51B5"
         }
-        holder.tvCurrentStatus.setTextColor(android.graphics.Color.parseColor(statusColor))
+        try {
+            holder.tvCurrentStatus.setTextColor(android.graphics.Color.parseColor(statusColor))
+        } catch (_: Exception) { /* ignore color parse issues */ }
 
         val statusToRadioMap = mapOf(
             2 to holder.rbDpickup,
@@ -85,26 +94,22 @@ class TrackAdapter(
             holder.rbProcessing, holder.rbOutForDelivery, holder.rbCPickup
         )
 
-        // Reset: hide and uncheck all radio buttons and hide radio group/submit by default
-        allRadioButtons.forEach {
-            it.visibility = View.GONE
-            it.isChecked = false
-            it.isEnabled = true
-            it.isClickable = true
-            it.isFocusable = true
-            it.setOnClickListener(null) // clear any previous click listeners
+        // Reset UI state
+        allRadioButtons.forEach { rb ->
+            rb.visibility = View.GONE
+            rb.isChecked = false
+            rb.isEnabled = true
+            rb.isClickable = true
+            rb.setOnClickListener(null)
         }
-        // clear previous group listener before resetting
         holder.rgStatusOptions.setOnCheckedChangeListener(null)
         holder.rgStatusOptions.clearCheck()
         holder.rgStatusOptions.visibility = View.GONE
         holder.rgStatusOptions.isEnabled = false
-        holder.rgStatusOptions.isClickable = false
         holder.btnSubmit.visibility = View.GONE
         holder.btnSubmit.isEnabled = false
-        holder.btnSubmit.setOnClickListener(null) // clear previous submit listener
+        holder.btnSubmit.setOnClickListener(null)
 
-        // Define full step list based on serviceID
         val fullStatusIDs = when (req.serviceID) {
             1L, 5L -> listOf(2, 4, 5, 6)
             2L, 6L -> listOf(2, 4, 5, 7)
@@ -112,57 +117,42 @@ class TrackAdapter(
             4L, 8L -> listOf(3, 4, 5, 7)
             else -> listOf()
         }
-        
-        // Find current index in flow
-        val currentIndex = fullStatusIDs.indexOf(req.statusID.toInt())
 
-        // Determine next status to show (handle case when status isn't in flow, e.g., 10 = Accepted)
+        val currentIndex = fullStatusIDs.indexOf(req.statusID)
+
         val nextStatus: Int? = when {
             fullStatusIDs.isEmpty() -> null
             currentIndex >= 0 && currentIndex < fullStatusIDs.size - 1 -> fullStatusIDs[currentIndex + 1]
-            currentIndex == -1 -> fullStatusIDs[0] // start flow when current status is 'Accepted' or outside flow
+            currentIndex == -1 -> fullStatusIDs[0]
             else -> null
         }
 
         if (nextStatus != null) {
-            // Show only the radio corresponding to the next status
-            val nextStepRadioButton = statusToRadioMap[nextStatus]
-            nextStepRadioButton?.let {
-                it.visibility = View.VISIBLE
-                it.isChecked = false // do NOT auto-check; allow user to tap
-                it.isEnabled = true
-                it.isClickable = true
-                it.isFocusable = true
+            val nextRadio = statusToRadioMap[nextStatus]
+            nextRadio?.let { rb ->
+                rb.visibility = View.VISIBLE
+                rb.isChecked = false
+                rb.isEnabled = true
                 holder.rgStatusOptions.visibility = View.VISIBLE
                 holder.rgStatusOptions.isEnabled = true
-                holder.rgStatusOptions.isClickable = true
                 holder.btnSubmit.visibility = View.VISIBLE
                 holder.btnSubmit.isEnabled = false
 
-                // Ensure the parent/item and RadioGroup allow children to receive touch/focus
-                // Make the parent not intercept touches so RadioButton receives the first tap
-                holder.itemView.isClickable = false
-                holder.itemView.isFocusable = false
-                holder.itemView.isFocusableInTouchMode = false
-                holder.rgStatusOptions.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-
-                // Add an explicit click listener to ensure immediate selection
-                it.setOnClickListener { rb ->
-                    (rb as? RadioButton)?.isChecked = true
-                    // ensure the radio group registers the change
-                    holder.rgStatusOptions.check((rb as RadioButton).id)
-                    holder.btnSubmit.isEnabled = true
-                    Log.d("TrackAdapter", "Radio clicked for request=${req.requestID}, radioId=${(rb as RadioButton).id}")
+                // clicking the radio ensures the radio group is checked and submit enabled
+                rb.setOnClickListener { v ->
+                    if (v is RadioButton) {
+                        v.isChecked = true
+                        holder.rgStatusOptions.check(v.id)
+                        holder.btnSubmit.isEnabled = true
+                        Log.d("TrackAdapter", "Radio clicked for request=${req.requestID}, radioId=${v.id}")
+                    }
                 }
             }
 
-            // Enable submit only when a selection is made
-            holder.rgStatusOptions.setOnCheckedChangeListener { group, checkedId ->
+            holder.rgStatusOptions.setOnCheckedChangeListener { _, checkedId ->
                 holder.btnSubmit.isEnabled = checkedId != -1
-                Log.d("TrackAdapter", "Checked changed request=${req.requestID}, checkedId=$checkedId")
             }
 
-            // Map radio id -> status for submit
             val radioIdToStatus = mapOf(
                 holder.rbDpickup.id to 2,
                 holder.rbCDropoff.id to 3,
@@ -172,29 +162,21 @@ class TrackAdapter(
                 holder.rbCPickup.id to 7
             )
 
-            // Add submit button click listener that reads the selected radio at the moment of click
             holder.btnSubmit.setOnClickListener {
                 val checkedId = holder.rgStatusOptions.checkedRadioButtonId
                 val selectedStatus = radioIdToStatus[checkedId]
-                Log.d("TrackAdapter", "Submit clicked request=${req.requestID}, checkedId=$checkedId, selectedStatus=$selectedStatus")
                 if (selectedStatus != null) {
                     onButtonClick(req, selectedStatus)
                 } else {
                     Toast.makeText(holder.itemView.context, "Please select a status option", Toast.LENGTH_SHORT).show()
                 }
             }
-        } else {
-            // No next step available -> hide submit (already hidden by reset above)
-            holder.btnSubmit.visibility = View.GONE
-            holder.btnSubmit.setOnClickListener(null)
-            holder.rgStatusOptions.setOnCheckedChangeListener(null)
         }
 
-        // Wire the More button to show a dialog with extra details
+        // More button shows details dialog and fetches contact
         holder.btnMore.setOnClickListener {
             val detailsBuilder = StringBuilder()
 
-            // Include pickup location if visible or service requires pickup
             if (!req.pickupLocation.isNullOrEmpty()) {
                 detailsBuilder.append("Pickup location: ${req.pickupLocation}\n")
             } else {
@@ -203,7 +185,6 @@ class TrackAdapter(
                 }
             }
 
-            // Include delivery location if visible or service requires delivery
             if (!req.deliveryLocation.isNullOrEmpty()) {
                 detailsBuilder.append("Delivery location: ${req.deliveryLocation}\n")
             } else {
@@ -212,41 +193,145 @@ class TrackAdapter(
                 }
             }
 
-            // Comment
             detailsBuilder.append("Comment: ${if (!req.comment.isNullOrEmpty()) req.comment else "None"}\n")
 
-            // Contact number — use Request.contactNumber if available
-            val contact = if (!req.contactNumber.isNullOrEmpty()) req.contactNumber else "Not available"
-            detailsBuilder.append("Contact number: $contact")
+            val initialContact = "Loading..."
+            detailsBuilder.append("Contact number: $initialContact")
 
-            val message = detailsBuilder.toString().trim()
+            // Holder for the final contact string returned by fetchContact. The neutral button's
+            // click listener below captures this variable by reference so when the user clicks
+            // "View profile" later it can include the latest `finalContact` (including any
+            // raw hint text produced by the fallback logic).
+            var finalContactHolder: String? = null
 
-            // Show dialog
-            android.app.AlertDialog.Builder(ctx)
-                .setTitle("Details")
-                .setMessage(if (message.isNotEmpty()) message else "No additional details")
-                .setPositiveButton("Close", null)
-                .show()
+            // Create a custom dialog from layout so we can show contact and action buttons
+            val dialog = android.app.Dialog(ctx)
+            val dlgView = LayoutInflater.from(ctx).inflate(R.layout.dialog_request_details, null)
+            dialog.setContentView(dlgView)
+            dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+            // Find dialog views
+            val tvDetailCustomerName: TextView = dlgView.findViewById(R.id.tvDetailCustomerName)
+            val tvDetailSackQty: TextView = dlgView.findViewById(R.id.tvDetailSackQty)
+            val tvDetailServices: TextView = dlgView.findViewById(R.id.tvDetailServices)
+            val tvDetailSchedule: TextView = dlgView.findViewById(R.id.tvDetailSchedule)
+            val tvDetailPickupLocation: TextView = dlgView.findViewById(R.id.tvDetailPickupLocation)
+            val tvDetailDeliveryLocation: TextView = dlgView.findViewById(R.id.tvDetailDeliveryLocation)
+            val tvDetailComment: TextView = dlgView.findViewById(R.id.tvDetailComment)
+            val tvDetailSubmittedAt: TextView = dlgView.findViewById(R.id.tvDetailSubmittedAt)
+            val tvDetailContact: TextView = dlgView.findViewById(R.id.tvDetailContact)
+            val btnCall: Button = dlgView.findViewById(R.id.btnCall)
+            val btnCopy: Button = dlgView.findViewById(R.id.btnCopy)
+            val btnMsg: Button = dlgView.findViewById(R.id.btnMessage)
+            val btnViewProfile: Button = dlgView.findViewById(R.id.btnViewProfile)
+            val btnClose: Button = dlgView.findViewById(R.id.btnClose)
+            // Hide progress-related UI for owner dialog (we don't show progress in this 'More' view)
+            val tvDetailProgressLabel: TextView? = dlgView.findViewById(R.id.tvDetailProgressLabel)
+            val progressBarRequest: ProgressBar? = dlgView.findViewById(R.id.progressBarRequest)
+            tvDetailProgressLabel?.visibility = View.GONE
+            progressBarRequest?.visibility = View.GONE
+
+            // Populate basic fields
+            tvDetailCustomerName.text = ctx.getString(com.example.capstone2.R.string.customer_format, req.customerName)
+            tvDetailSackQty.text = ctx.getString(com.example.capstone2.R.string.sacks_format, req.sackQuantity)
+            tvDetailServices.text = ctx.getString(com.example.capstone2.R.string.services_format, req.serviceName)
+            tvDetailSchedule.text = ctx.getString(com.example.capstone2.R.string.schedule_format_owner, req.schedule ?: ctx.getString(com.example.capstone2.R.string.not_set))
+            tvDetailComment.text = ctx.getString(com.example.capstone2.R.string.comment_format, req.comment ?: "None")
+            tvDetailSubmittedAt.text = ctx.getString(com.example.capstone2.R.string.submitted_at_format, req.submittedAt ?: "Unknown")
+
+            fun showContactRow(contact: String?) {
+                if (contact.isNullOrBlank()) {
+                    tvDetailContact.visibility = View.GONE
+                    btnCall.visibility = View.GONE
+                    btnCopy.visibility = View.GONE
+                } else {
+                    tvDetailContact.visibility = View.VISIBLE
+                    tvDetailContact.text = "Contact number: $contact"
+                    // Only enable call/copy actions if the contact looks like a phone number
+                    val digits = contact.filter { it.isDigit() }
+                    val actionable = digits.length >= 6
+                    btnCall.visibility = if (actionable) View.VISIBLE else View.GONE
+                    btnCopy.visibility = if (actionable) View.VISIBLE else View.GONE
+                }
+            }
+
+            // Wire View profile button
+            btnViewProfile.visibility = View.VISIBLE
+            btnViewProfile.setOnClickListener {
+                try {
+                    val intent = Intent(ctx, ViewUserProfileActivity::class.java)
+                    intent.putExtra("userId", req.customerID)
+                    if (!finalContactHolder.isNullOrBlank()) intent.putExtra("rawHint", finalContactHolder)
+                    ctx.startActivity(intent)
+                } catch (_: Exception) { /* ignore */ }
+            }
+
+            // Wire Call and Copy actions
+            btnCall.setOnClickListener {
+                val phone = finalContactHolder ?: req.contactNumber
+                if (!phone.isNullOrBlank()) {
+                    try {
+                        val dial = Intent(Intent.ACTION_DIAL)
+                        dial.data = android.net.Uri.parse("tel:$phone")
+                        ctx.startActivity(dial)
+                    } catch (_: Exception) { Toast.makeText(ctx, "Cannot start dialer", Toast.LENGTH_SHORT).show() }
+                }
+            }
+
+            btnCopy.setOnClickListener {
+                val phone = finalContactHolder ?: req.contactNumber
+                if (!phone.isNullOrBlank()) {
+                    try {
+                        val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clip = android.content.ClipData.newPlainText("contact", phone)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(ctx, "Contact copied", Toast.LENGTH_SHORT).show()
+                    } catch (_: Exception) { Toast.makeText(ctx, "Cannot copy", Toast.LENGTH_SHORT).show() }
+                }
+            }
+
+            // Close button
+            btnClose.setOnClickListener { dialog.dismiss() }
+
+            // Initially show either the static contact if present or a loading state and fetch
+            if (!req.contactNumber.isNullOrBlank()) {
+                finalContactHolder = req.contactNumber
+                showContactRow(req.contactNumber)
+            } else {
+                // show loading until fetchContact completes
+                tvDetailContact.visibility = View.VISIBLE
+                tvDetailContact.text = "Contact number: Loading..."
+                btnCall.visibility = View.GONE
+                btnCopy.visibility = View.GONE
+                fetchContact(req.customerID) { finalContact ->
+                    finalContactHolder = finalContact
+                    // update UI on main thread
+                    (ctx as? android.app.Activity)?.runOnUiThread {
+                        showContactRow(finalContact)
+                    } ?: showContactRow(finalContact)
+                }
+            }
+
+            dialog.show()
         }
-
     }
 
     override fun getItemCount(): Int = requests.size
 
     fun updateRequests(newRequests: List<Request>) {
-        requests = newRequests
+        this.requests = newRequests
         notifyDataSetChanged()
     }
-    
+
     private fun getStatusText(statusId: Int): String {
         return when (statusId) {
             1 -> "Subject for approval"
             2 -> "Delivery boy pickup"
             3 -> "Waiting for customer drop off"
-            4 -> "In queue"
+            4 -> "Pending"
             5 -> "Processing"
             6 -> "Rider out for delivery"
-            7 -> "Waiting for customer to claim"
+            7 -> "Waiting for customer pickup"
             8 -> "Completed"
             9 -> "Rejected"
             10 -> "Request Accepted"
