@@ -103,7 +103,10 @@ class CustomerTrackAdapter(
         val btnClose: Button = dialog.findViewById(R.id.btnClose)
         val btnEdit: Button = dialog.findViewById(R.id.btnEdit)
         val btnMessage: Button? = dialog.findViewById(R.id.btnMessage)
+        // Ensure View Profile button (present in layout) is hidden for the customer "More" dialog
         val btnViewProfile: Button? = dialog.findViewById(R.id.btnViewProfile)
+        btnViewProfile?.visibility = View.GONE
+        // View Profile button removed for customer "More" dialog
         // New contact controls
         val tvDetailContact: TextView? = dialog.findViewById(R.id.tvDetailContact)
         val btnCall: Button? = dialog.findViewById(R.id.btnCall)
@@ -258,20 +261,6 @@ class CustomerTrackAdapter(
 
         btnClose.setOnClickListener {
             dialog.dismiss()
-        }
-
-        // Wire the View Profile button so customer can open the profile screen
-        btnViewProfile?.let { btn ->
-            btn.visibility = View.VISIBLE
-            btn.setOnClickListener {
-                try {
-                    val ctx = context
-                    val intent = android.content.Intent(ctx, com.example.capstone2.user.ViewUserProfileActivity::class.java)
-                    intent.putExtra("userId", request.customerID)
-                    dialog.dismiss()
-                    ctx.startActivity(intent)
-                } catch (_: Exception) { dialog.dismiss() }
-            }
         }
 
         dialog.show()
