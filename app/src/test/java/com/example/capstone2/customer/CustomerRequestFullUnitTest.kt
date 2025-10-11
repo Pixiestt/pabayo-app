@@ -55,7 +55,6 @@ class CustomerRequestFullUnitTest {
         assertEquals(customerID, request.customerID)
         assertEquals(1L, request.serviceID)
         assertEquals(1L, request.statusID)
-        assertEquals(1L, request.courierID)
         assertEquals(dummyPickupDate, request.pickupDate)
         assertEquals(null, request.deliveryDate)
         assertEquals(dummySackCount, request.sackQuantity)

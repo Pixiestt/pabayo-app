@@ -1,6 +1,7 @@
 package com.example.capstone2.network
 
 import com.example.capstone2.data.models.CreateRequest
+import com.example.capstone2.data.models.DeliveryBoyRequestsResponse
 import com.example.capstone2.data.models.NotificationResponse
 import com.example.capstone2.data.models.Request
 import com.example.capstone2.data.models.RequestResponse
@@ -29,6 +30,7 @@ interface ApiService {
 
     @PUT("api/requests/{requestID}/status/{statusID}")
     suspend fun updateRequestStatus(
+
         @Path("requestID") requestID: Long,
         @Path("statusID") statusID: Int
     ): Response<ResponseBody>
@@ -41,4 +43,13 @@ interface ApiService {
 
     @GET("api/notifications")
     suspend fun getNotifications(): Response<NotificationResponse>
+
+    @GET("api/deliveryboy/requests")
+    suspend fun getDeliveryBoyRequests(): Response<DeliveryBoyRequestsResponse>
+
+    @POST("api/requests/{requestID}/pickup-done")
+    suspend fun markPickupDone(
+        @Path("id") requestID: Long): Response<ResponseBody>
+
+
 }

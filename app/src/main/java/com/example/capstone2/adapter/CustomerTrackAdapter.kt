@@ -53,6 +53,8 @@ class CustomerTrackAdapter(
             9 -> "Rejected"
             10 -> "Request Accepted"
             11 -> "Partially Accepted"
+            12 -> "Milling done"
+            13 -> "Delivered"
             else -> "Unknown Status"
         }
         holder.status.text = ctx.getString(R.string.status_format, statusText)
@@ -206,6 +208,7 @@ class CustomerTrackAdapter(
             7 -> 80  // Waiting for customer pickup
             8 -> 100 // Completed
             9 -> 0   // Rejected
+            12 -> 55 //Milling done
             else -> 0
         }
 

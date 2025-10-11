@@ -42,11 +42,15 @@ class ChatAdapter(private val currentUserId: Long) : ListAdapter<Message, Recycl
 
     class SentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val bubble: View? = itemView.findViewById(R.id.messageBubbleSent)
+        private val tvSenderName: TextView? = itemView.findViewById(R.id.tvSenderNameSent)
         private val tvMessage: TextView? = itemView.findViewById(R.id.tvMessageSent)
         private val tvTime: TextView? = itemView.findViewById(R.id.tvTimeSent)
-
         @Suppress("UNUSED_PARAMETER")
         fun bind(m: Message, _currentUserId: Long) {
+            // Determine display name
+            val name = m.senderName ?: if (m.senderID == currentUserId) "You" else "User ${m.senderID}"
+            tvSenderName?.text = name
+
             // Message text and time
             tvMessage?.visibility = View.VISIBLE
             tvMessage?.text = m.message
@@ -61,18 +65,21 @@ class ChatAdapter(private val currentUserId: Long) : ListAdapter<Message, Recycl
 
             // Colors
             tvMessage?.setTextColor(Color.BLACK)
+            tvSenderName?.setTextColor(Color.BLACK)
             tvTime?.setTextColor("#666666".toColorInt())
         }
     }
 
-    class ReceivedViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val bubble: View? = itemView.findViewById(R.id.messageBubbleReceived)
+        @Suppress("UNUSED_PARAMETER")
+        fun bind(m: Message, _currentUserId: Long) {
+        private val tvSenderName: TextView? = itemView.findViewById(R.id.tvSenderNameReceived)
         private val tvMessage: TextView? = itemView.findViewById(R.id.tvMessageReceived)
         private val tvTime: TextView? = itemView.findViewById(R.id.tvTimeReceived)
             // Use a single white bubble for received messages
-        @Suppress("UNUSED_PARAMETER")
-        fun bind(m: Message, _currentUserId: Long) {
+        fun bind(m: Message, currentUserId: Long) {
                 bubble?.setBackgroundResource(R.drawable.bg_message_received)
+            val name = m.senderName ?: m.receiverName ?: if (m.senderID == currentUserId) "You" else "User ${m.senderID}"
+            tvSenderName?.text = name
 
             // Message text and time
             tvMessage?.visibility = View.VISIBLE
@@ -96,6 +103,7 @@ class ChatAdapter(private val currentUserId: Long) : ListAdapter<Message, Recycl
 
             // Colors for received messages
             tvMessage?.setTextColor(Color.BLACK)
+            tvSenderName?.setTextColor("#333333".toColorInt())
             tvTime?.setTextColor("#666666".toColorInt())
         }
     }

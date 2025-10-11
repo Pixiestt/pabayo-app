@@ -1,6 +1,7 @@
 package com.example.capstone2.data.api
 
 import com.example.capstone2.data.models.CreateRequest
+import com.example.capstone2.data.models.DeliveryBoyRequestsResponse
 import com.example.capstone2.data.models.LoginRequest
 import com.example.capstone2.data.models.LoginResponse
 import com.example.capstone2.data.models.NotificationResponse
@@ -57,6 +58,7 @@ interface ApiService {
 
     @PUT("api/requests/{requestID}/status/{statusID}")
     suspend fun updateRequestStatus(
+
         @Path("requestID") requestID: Long,
         @Path("statusID") statusID: Int
     ): Response<ResponseBody>
@@ -109,4 +111,14 @@ interface ApiService {
     // Generic raw GET by relative URL (useful when server uses varying user endpoints)
     @GET
     suspend fun getRaw(@Url url: String): Response<okhttp3.ResponseBody>
+
+    @GET("api/deliveryboy/requests")
+    suspend fun getDeliveryBoyRequests(): Response<DeliveryBoyRequestsResponse>
+
+    @POST("api/requests/{id}/pickup-done")
+    suspend fun markPickupDone(
+        @Path("id") requestID: Long
+    ): Response<ResponseBody>
+
+
 }

@@ -84,6 +84,15 @@
                 android:layout_marginTop="6dp"
                 android:layout_marginBottom="8dp" />
 
+            <TextView
+                android:id="@+id/tvService"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Service: "
+                android:textSize="14sp"
+                android:layout_marginTop="4dp"/>
+
+
             <!-- Divider below current status -->
             <View
                 android:layout_width="match_parent"
@@ -143,6 +152,24 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/rb_out_for_delivery"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/black"
+                    android:layout_marginBottom="4dp" />
+
+                <RadioButton
+                    android:id="@+id/rbMillingDone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rb_milling_done"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/black"
+                    android:layout_marginBottom="4dp" />
+
+                <RadioButton
+                    android:id="@+id/rbDelivered"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rb_delivered"
                     android:textSize="14sp"
                     android:textColor="@android:color/black"
                     android:layout_marginBottom="4dp" />

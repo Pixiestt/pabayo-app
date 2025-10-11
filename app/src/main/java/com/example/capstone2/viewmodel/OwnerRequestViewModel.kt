@@ -179,6 +179,8 @@ class OwnerRequestViewModel(
             9 -> "Rejected"
             10 -> "Request Accepted"
             11 -> "Partially Accepted"
+            12 -> "Milling done"
+            13 -> "Delivered"
             else -> "Unknown status"
         }
     }

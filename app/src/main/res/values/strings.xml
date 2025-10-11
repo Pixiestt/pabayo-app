@@ -111,6 +111,10 @@
     <string name="rb_out_for_delivery">Out for Delivery</string>
     <string name="rb_waiting_customer_pickup">Done milling</string>
     <string name="submit">Submit</string>
+    <string name="rb_milling_done">Milling Done</string>
+    <string name="rb_delivered">Delivered</string>
+    <string name="rb_waiting_customer_pickup">Waiting for Customer Pickup</string>
+    <string name="submit">Update</string>
 
     <!-- Add title string used in owner fragment -->
     <string name="title_track">Update Status</string>
