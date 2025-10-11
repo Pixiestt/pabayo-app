@@ -25,7 +25,7 @@ interface ApiService {
     @POST("api/requests/{requestID}/accept")
     suspend fun acceptRequest(@Path("requestID") requestID: Long): Response<ResponseBody>
 
-    @PUT("api/requests/{requestID}/reject")
+    @POST("api/requests/{requestID}/reject")
     suspend fun rejectRequest(@Path("requestID") requestID: Long): Response<ResponseBody>
 
     @PUT("api/requests/{requestID}/status/{statusID}")

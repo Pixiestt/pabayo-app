@@ -42,53 +42,46 @@ class ChatAdapter(private val currentUserId: Long) : ListAdapter<Message, Recycl
 
     class SentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val bubble: View? = itemView.findViewById(R.id.messageBubbleSent)
-        private val tvSenderName: TextView? = itemView.findViewById(R.id.tvSenderNameSent)
         private val tvMessage: TextView? = itemView.findViewById(R.id.tvMessageSent)
         private val tvTime: TextView? = itemView.findViewById(R.id.tvTimeSent)
-        @Suppress("UNUSED_PARAMETER")
-        fun bind(m: Message, _currentUserId: Long) {
-            // Determine display name
-            val name = m.senderName ?: if (m.senderID == currentUserId) "You" else "User ${m.senderID}"
-            tvSenderName?.text = name
 
-            // Message text and time
+        fun bind(m: Message, currentUserId: Long) {
+            // sender name intentionally not shown here — title already displays the conversation name
+
             tvMessage?.visibility = View.VISIBLE
-            tvMessage?.text = m.message
+            tvMessage?.text = m.message ?: ""
             tvTime?.text = m.timestamp ?: ""
 
-            // Style sent bubble (prefer drawable but fallback to color)
             try {
                 bubble?.setBackgroundResource(R.drawable.bg_message_sent)
             } catch (_: Exception) {
-                bubble?.setBackgroundColor("#DFF0D8".toColorInt()) // light green fallback
+                try {
+                    bubble?.setBackgroundColor("#DFF0D8".toColorInt())
+                } catch (_: Exception) {
+                    bubble?.setBackgroundColor(Color.parseColor("#DFF0D8"))
+                }
             }
 
-            // Colors
             tvMessage?.setTextColor(Color.BLACK)
-            tvSenderName?.setTextColor(Color.BLACK)
-            tvTime?.setTextColor("#666666".toColorInt())
+            try { tvTime?.setTextColor("#666666".toColorInt()) } catch (_: Exception) { tvTime?.setTextColor(Color.DKGRAY) }
         }
     }
 
-        @Suppress("UNUSED_PARAMETER")
-        fun bind(m: Message, _currentUserId: Long) {
-        private val tvSenderName: TextView? = itemView.findViewById(R.id.tvSenderNameReceived)
+    class ReceivedViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val bubble: View? = itemView.findViewById(R.id.messageBubbleReceived)
         private val tvMessage: TextView? = itemView.findViewById(R.id.tvMessageReceived)
         private val tvTime: TextView? = itemView.findViewById(R.id.tvTimeReceived)
-            // Use a single white bubble for received messages
-        fun bind(m: Message, currentUserId: Long) {
-                bubble?.setBackgroundResource(R.drawable.bg_message_received)
-            val name = m.senderName ?: m.receiverName ?: if (m.senderID == currentUserId) "You" else "User ${m.senderID}"
-            tvSenderName?.text = name
 
-            // Message text and time
+        fun bind(m: Message, currentUserId: Long) {
+            // sender name intentionally not shown here — title already displays the conversation name
+
             tvMessage?.visibility = View.VISIBLE
-            tvMessage?.text = m.message
+            tvMessage?.text = m.message ?: ""
             tvTime?.text = m.timestamp ?: ""
 
-            // Choose a received bubble variant deterministically
             try {
-                val key = m.id?.hashCode() ?: (m.message + ":" + m.senderID).hashCode()
+                // Pick a deterministic variant if drawables exist
+                val key = m.id?.hashCode() ?: (m.message ?: "").hashCode() xor m.senderID.hashCode()
                 val variants = listOf(
                     R.drawable.bg_message_received_variant_1,
                     R.drawable.bg_message_received_variant_2,
@@ -97,26 +90,25 @@ class ChatAdapter(private val currentUserId: Long) : ListAdapter<Message, Recycl
                 val idx = kotlin.math.abs(key) % variants.size
                 bubble?.setBackgroundResource(variants[idx])
             } catch (_: Exception) {
-                // fallback to white background if drawables are missing
-                bubble?.setBackgroundColor(Color.WHITE)
+                try {
+                    bubble?.setBackgroundResource(R.drawable.bg_message_received)
+                } catch (_: Exception) {
+                    bubble?.setBackgroundColor(Color.WHITE)
+                }
             }
 
-            // Colors for received messages
             tvMessage?.setTextColor(Color.BLACK)
-            tvSenderName?.setTextColor("#333333".toColorInt())
-            tvTime?.setTextColor("#666666".toColorInt())
+            try { tvTime?.setTextColor("#666666".toColorInt()) } catch (_: Exception) { tvTime?.setTextColor(Color.DKGRAY) }
         }
     }
 
     class DiffCallback : DiffUtil.ItemCallback<Message>() {
         override fun areItemsTheSame(oldItem: Message, newItem: Message): Boolean {
-            // Prefer server-assigned id when available
             val oldId = oldItem.id
             val newId = newItem.id
             if (oldId != null && newId != null) return oldId == newId
-            // Fallback: use a composite of senderID + timestamp + message content
-            val oldKey = "${oldItem.senderID}:${oldItem.timestamp ?: ""}:${oldItem.message}"
-            val newKey = "${newItem.senderID}:${newItem.timestamp ?: ""}:${newItem.message}"
+            val oldKey = "${oldItem.senderID}:${oldItem.timestamp ?: ""}:${oldItem.message ?: ""}"
+            val newKey = "${newItem.senderID}:${newItem.timestamp ?: ""}:${newItem.message ?: ""}"
             return oldKey == newKey
         }
 

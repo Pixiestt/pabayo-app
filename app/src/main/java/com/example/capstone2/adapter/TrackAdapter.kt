@@ -1,13 +1,11 @@
 package com.example.capstone2.adapter
 
 import android.content.Intent
-import android.graphics.Color
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.RecyclerView
 import com.example.capstone2.R
 import com.example.capstone2.user.ViewUserProfileActivity
@@ -64,15 +62,15 @@ class TrackAdapter(
         )
 
         // Hide locations in item row (shown in More dialog)
-        holder.tvSchedule.text = ctx.getString(R.string.schedule_format_owner, req.schedule ?: ctx.getString(R.string.not_set))
         holder.tvPickupLocation.visibility = View.GONE
         holder.tvDeliveryLocation.visibility = View.GONE
 
         // Current status text and color
-        val currentStatusText = getStatusText(req.statusID)
+        val currentStatusInt = try { req.statusID.toInt() } catch (_: Exception) { 0 }
+        val currentStatusText = getStatusText(currentStatusInt)
         holder.tvCurrentStatus.text = ctx.getString(R.string.status_format, currentStatusText)
 
-        val statusColor = when (req.statusID) {
+        val statusColor = when (currentStatusInt) {
             10 -> "#4CAF50"
             2, 3 -> "#FF9800"
             4 -> "#2196F3"
@@ -84,16 +82,7 @@ class TrackAdapter(
             holder.tvCurrentStatus.setTextColor(android.graphics.Color.parseColor(statusColor))
         } catch (_: Exception) { /* ignore color parse issues */ }
 
-        val statusToRadioMap = mapOf(
-            2 to holder.rbDpickup,
-            3 to holder.rbCDropoff,
-            4 to holder.rbPending,
-            5 to holder.rbProcessing,
-            6 to holder.rbOutForDelivery,
-            7 to holder.rbCPickup
-        )
-        holder.tvCurrentStatus.text = ctx.getString(R.string.status_format, getStatusText(req.statusID.toInt()))
-
+        // All radio buttons list
         val allRadioButtons = listOf(
             holder.rbDpickup, holder.rbCDropoff, holder.rbPending, holder.rbProcessing,
             holder.rbOutForDelivery, holder.rbCPickup, holder.rbMillingDone, holder.rbDelivered
@@ -106,9 +95,6 @@ class TrackAdapter(
             rb.isEnabled = true
             rb.isClickable = true
             rb.setOnClickListener(null)
-        allRadioButtons.forEach {
-            it.visibility = View.GONE
-            it.isChecked = false
         }
         holder.rgStatusOptions.setOnCheckedChangeListener(null)
         holder.rgStatusOptions.clearCheck()
@@ -118,14 +104,13 @@ class TrackAdapter(
         holder.btnSubmit.isEnabled = false
         holder.btnSubmit.setOnClickListener(null)
 
-        val serviceId = req.serviceID.toInt()
-        val currentStatus = req.statusID.toInt()
+        val serviceId = try { req.serviceID.toInt() } catch (_: Exception) { 0 }
+        val currentStatus = currentStatusInt
 
         val hasPickup = serviceId in listOf(1, 2, 5)
         val hasDelivery = serviceId in listOf(1, 3, 5)
 
-        var nextStatus: Int? = null
-
+        // Define the canonical progression for different service types
         val fullStatusIDs = when (req.serviceID) {
             1L, 5L -> listOf(2, 4, 5, 6)
             2L, 6L -> listOf(2, 4, 5, 7)
@@ -134,34 +119,20 @@ class TrackAdapter(
             else -> listOf()
         }
 
-        val currentIndex = fullStatusIDs.indexOf(req.statusID)
-        when {
-            // === Pickup + Delivery ===
-            (serviceId == 1 || serviceId == 5) -> when (currentStatus) {
-                4 -> nextStatus = 5
-                5 -> nextStatus = 12
-                else -> nextStatus = null
-            }
-
-            // === Pickup Only ===
-            (serviceId == 2) -> when (currentStatus) {
-                4 -> nextStatus = 5
-                5 -> nextStatus = 12
-                12 -> nextStatus = 7
-            }
-
-        val nextStatus: Int? = when {
-            fullStatusIDs.isEmpty() -> null
-            currentIndex >= 0 && currentIndex < fullStatusIDs.size - 1 -> fullStatusIDs[currentIndex + 1]
-            currentIndex == -1 -> fullStatusIDs[0]
-            else -> null
-            // === Delivery Only ===
-            (serviceId == 3) -> when (currentStatus) {
-                10 -> nextStatus = 3 // owner can set "Waiting for customer drop off"
-                3 -> nextStatus = 4
-                4 -> nextStatus = 5
-                5 -> nextStatus = 12
-                else -> nextStatus = null
+        // Compute nextStatus using a combination of the canonical list and a couple of special rules
+        var nextStatus: Int? = null
+        if (currentStatus == 10) {
+            // owner can set 'Waiting for customer drop off' from Request Accepted
+            nextStatus = 3
+        } else if (currentStatus == 5) {
+            // from Processing -> Milling Done
+            nextStatus = 12
+        } else if (fullStatusIDs.isNotEmpty()) {
+            val currentIndex = fullStatusIDs.indexOf(currentStatus)
+            nextStatus = when {
+                currentIndex >= 0 && currentIndex < fullStatusIDs.size - 1 -> fullStatusIDs[currentIndex + 1]
+                currentIndex == -1 -> fullStatusIDs[0]
+                else -> null
             }
         }
 
@@ -172,7 +143,8 @@ class TrackAdapter(
             5 to holder.rbProcessing,
             6 to holder.rbOutForDelivery,
             7 to holder.rbCPickup,
-            12 to holder.rbMillingDone
+            12 to holder.rbMillingDone,
+            13 to holder.rbDelivered
         )
 
         if (nextStatus != null) {
@@ -181,24 +153,19 @@ class TrackAdapter(
                 rb.visibility = View.VISIBLE
                 rb.isChecked = false
                 rb.isEnabled = true
-            statusToRadioMap[nextStatus]?.apply {
-                visibility = View.VISIBLE
+
                 holder.rgStatusOptions.visibility = View.VISIBLE
                 holder.rgStatusOptions.isEnabled = true
                 holder.btnSubmit.visibility = View.VISIBLE
                 holder.btnSubmit.isEnabled = false
 
-                // clicking the radio ensures the radio group is checked and submit enabled
-                rb.setOnClickListener { v ->
-                    if (v is RadioButton) {
-                        v.isChecked = true
-                        holder.rgStatusOptions.check(v.id)
+                rb.setOnClickListener { view ->
+                    if (view is RadioButton) {
+                        view.isChecked = true
+                        holder.rgStatusOptions.check(view.id)
                         holder.btnSubmit.isEnabled = true
-                        Log.d("TrackAdapter", "Radio clicked for request=${req.requestID}, radioId=${v.id}")
+                        Log.d("TrackAdapter", "Radio clicked for request=${req.requestID}, radioId=${view.id}")
                     }
-                setOnClickListener {
-                    isChecked = true
-                    holder.btnSubmit.isEnabled = true
                 }
             }
 
@@ -212,7 +179,9 @@ class TrackAdapter(
                 holder.rbPending.id to 4,
                 holder.rbProcessing.id to 5,
                 holder.rbOutForDelivery.id to 6,
-                holder.rbCPickup.id to 7
+                holder.rbCPickup.id to 7,
+                holder.rbMillingDone.id to 12,
+                holder.rbDelivered.id to 13
             )
 
             holder.btnSubmit.setOnClickListener {
@@ -220,10 +189,11 @@ class TrackAdapter(
                 val selectedStatus = radioIdToStatus[checkedId]
                 if (selectedStatus != null) {
                     onButtonClick(req, selectedStatus)
+                } else if (nextStatus != null) {
+                    // fallback: if user didn't explicitly pick a radio but we computed a next status
+                    onButtonClick(req, nextStatus)
                 } else {
                     Toast.makeText(holder.itemView.context, "Please select a status option", Toast.LENGTH_SHORT).show()
-                holder.btnSubmit.setOnClickListener {
-                    onButtonClick(req, nextStatus)
                 }
             }
         }
@@ -245,18 +215,6 @@ class TrackAdapter(
             }
 
             detailsBuilder.append("Comment: ${if (!req.comment.isNullOrEmpty()) req.comment else "None"}\n")
-
-            val initialContact = "Loading..."
-            detailsBuilder.append("Contact number: $initialContact")
-
-            // Holder for the final contact string returned by fetchContact. The neutral button's
-            // click listener below captures this variable by reference so when the user clicks
-            // "View profile" later it can include the latest `finalContact` (including any
-            // raw hint text produced by the fallback logic).
-            var finalContactHolder: String? = null
-            detailsBuilder.append("Comment: ${req.comment ?: "None"}\n")
-            val contact = if (!req.contactNumber.isNullOrEmpty()) req.contactNumber else "Not available"
-            detailsBuilder.append("Contact number: $contact")
 
             // Create a custom dialog from layout so we can show contact and action buttons
             val dialog = android.app.Dialog(ctx)
@@ -315,14 +273,13 @@ class TrackAdapter(
                 try {
                     val intent = Intent(ctx, ViewUserProfileActivity::class.java)
                     intent.putExtra("userId", req.customerID)
-                    if (!finalContactHolder.isNullOrBlank()) intent.putExtra("rawHint", finalContactHolder)
                     ctx.startActivity(intent)
                 } catch (_: Exception) { /* ignore */ }
             }
 
             // Wire Call and Copy actions
             btnCall.setOnClickListener {
-                val phone = finalContactHolder ?: req.contactNumber
+                val phone = req.contactNumber
                 if (!phone.isNullOrBlank()) {
                     try {
                         val dial = Intent(Intent.ACTION_DIAL)
@@ -333,7 +290,7 @@ class TrackAdapter(
             }
 
             btnCopy.setOnClickListener {
-                val phone = finalContactHolder ?: req.contactNumber
+                val phone = req.contactNumber
                 if (!phone.isNullOrBlank()) {
                     try {
                         val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
@@ -349,7 +306,6 @@ class TrackAdapter(
 
             // Initially show either the static contact if present or a loading state and fetch
             if (!req.contactNumber.isNullOrBlank()) {
-                finalContactHolder = req.contactNumber
                 showContactRow(req.contactNumber)
             } else {
                 // show loading until fetchContact completes
@@ -358,7 +314,6 @@ class TrackAdapter(
                 btnCall.visibility = View.GONE
                 btnCopy.visibility = View.GONE
                 fetchContact(req.customerID) { finalContact ->
-                    finalContactHolder = finalContact
                     // update UI on main thread
                     (ctx as? android.app.Activity)?.runOnUiThread {
                         showContactRow(finalContact)
@@ -367,12 +322,6 @@ class TrackAdapter(
             }
 
             dialog.show()
-        }
-            android.app.AlertDialog.Builder(ctx)
-                .setTitle("Details")
-                .setMessage(detailsBuilder.toString().trim())
-                .setPositiveButton("Close", null)
-                .show()
         }
     }
 
