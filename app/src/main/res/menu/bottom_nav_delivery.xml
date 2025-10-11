@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/pickups"
+        android:icon="@drawable/ic_pickup"
+        android:title="Pickups" />
+    <item
+        android:id="@+id/deliveries"
+        android:icon="@drawable/ic_delivery"
+        android:title="Deliveries" />
+    <item
+        android:id="@+id/logout"
+        android:icon="@drawable/ic_logout"
+        android:title="Logout" />
+
+</menu>
+
+

@@ -17,6 +17,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.capstone2.R
 import com.example.capstone2.customer.CustomerMainActivity
 import com.example.capstone2.data.models.LoginRequest
+import com.example.capstone2.delivery.DeliveryMainActivity
 import com.example.capstone2.owner.OwnerMainActivity
 import com.example.capstone2.viewmodel.UserViewModel
 import com.example.capstone2.viewmodel.UserViewModelFactory
@@ -102,6 +103,7 @@ class LoginActivity : AppCompatActivity() {
                         when (user.roleID.toLong()) {
                             2L -> startActivity(Intent(this, OwnerMainActivity::class.java))
                             3L -> startActivity(Intent(this, CustomerMainActivity::class.java))
+                            4L -> startActivity(Intent(this, DeliveryMainActivity::class.java))
                             else -> Toast.makeText(this, "Unknown role ID: ${user.roleID}", Toast.LENGTH_SHORT).show()
                         }
 

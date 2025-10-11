@@ -41,6 +41,12 @@
         <activity
             android:name=".customer.RequestWizardActivity"
             android:exported="false" />
+        <activity
+            android:name=".delivery.DeliveryMainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".delivery.DeliveryTrackActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

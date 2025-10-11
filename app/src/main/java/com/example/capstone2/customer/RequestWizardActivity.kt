@@ -159,7 +159,6 @@ class RequestWizardActivity : AppCompatActivity() {
             customerID = customerID,
             serviceID = serviceID,
             statusID = 1L,
-            courierID = 1L,
             pickupDate = requestWizardData.pickupDate ?: "",
             deliveryDate = null,
             sackQuantity = requestWizardData.sackCount,

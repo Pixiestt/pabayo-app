@@ -114,7 +114,7 @@ class RequestRepository(private val apiService: ApiService) {
         Log.d("RequestRepository", "Rejecting request ID: $requestId")
         return apiService.updateRequestStatus(requestId, 9)
     }
-    
+
     suspend fun updateRequestStatus(requestId: Long, statusId: Int): Response<ResponseBody> {
         Log.d("RequestRepository", "Updating request ID: $requestId to status: $statusId")
         return apiService.updateRequestStatus(requestId, statusId)
@@ -257,6 +257,21 @@ class RequestRepository(private val apiService: ApiService) {
             }
         }
         return s
+    }
+
+    // Fetch delivery boy requests
+    suspend fun getDeliveryBoyRequests(): List<Request> {
+        val resp = apiService.getDeliveryBoyRequests() // use apiService instead of api
+        if (resp.isSuccessful) {
+            return resp.body()?.requests ?: emptyList()
+        } else {
+            throw Exception("Failed to fetch delivery boy requests: ${resp.code()}")
+        }
+    }
+
+    suspend fun markPickupDone(requestId: Long): Response<ResponseBody> {
+        Log.d("RequestRepository", "Courier marking pickup done for request ID: $requestId")
+        return apiService.markPickupDone(requestId)
     }
 
 }

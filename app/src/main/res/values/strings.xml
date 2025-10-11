@@ -106,6 +106,8 @@
     <string name="rb_pending">Pending</string>
     <string name="rb_processing">Processing</string>
     <string name="rb_out_for_delivery">Out for Delivery</string>
+    <string name="rb_milling_done">Milling Done</string>
+    <string name="rb_delivered">Delivered</string>
     <string name="rb_waiting_customer_pickup">Waiting for Customer Pickup</string>
     <string name="submit">Update</string>
 
