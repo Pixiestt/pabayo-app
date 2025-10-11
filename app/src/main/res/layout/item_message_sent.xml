@@ -23,6 +23,8 @@
         android:padding="8dp"
         android:orientation="vertical">
 
+        <!-- Sender name removed: title already shows the name -->
+
         <TextView
             android:id="@+id/tvMessageSent"
             android:layout_width="wrap_content"

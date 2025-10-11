@@ -138,7 +138,8 @@ class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
                     status == 6 || // Status 6 = Rider out for delivery
                     status == 7 || // Status 7 = Waiting for customer pickup
                     status == 10 || // Status 10 = Request Accepted
-                    status == 11    // Status 11 = Partially Accepted
+                    status == 11 ||  // Status 11 = Partially Accepted
+                    status == 12 // Status 12 = Milling done
                 } catch (e: NumberFormatException) {
                     Log.e("CustomerQueue", "Invalid statusID: ${it.statusID}")
                     false

@@ -9,7 +9,6 @@ fun buildCreateRequest(
     ownerID: Long = 2L,
     serviceID: Long = 1L,
     statusID: Long = 1L,
-    courierID: Long = 1L,
     modeID: Long = 1L
 ): CreateRequest {
     return CreateRequest(
@@ -17,7 +16,6 @@ fun buildCreateRequest(
         customerID = customerID,
         serviceID = serviceID,
         statusID = statusID,
-        courierID = courierID,
         pickupDate = data.pickupDate ?: "",
         deliveryDate = null,
         sackQuantity = data.sackCount,

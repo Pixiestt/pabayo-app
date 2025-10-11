@@ -100,6 +100,7 @@ class NotificationService(
             9 -> "Rejected"
             10 -> "Request Accepted"
             11 -> "Partially Accepted"
+            12 -> "Milling done"
             else -> "Unknown status"
         }
     }

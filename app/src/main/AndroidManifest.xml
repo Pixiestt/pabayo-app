@@ -54,6 +54,12 @@
             android:name=".user.ViewUserProfileActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".delivery.DeliveryMainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".delivery.DeliveryTrackActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
