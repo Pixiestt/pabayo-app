@@ -4,10 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.capstone2.R
+import com.example.capstone2.repository.SharedPrefManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class DeliveryMainActivity : AppCompatActivity() {
@@ -67,12 +67,8 @@ class DeliveryMainActivity : AppCompatActivity() {
 
     // Clear stored auth and navigate to LoginActivity
     private fun performLogout() {
-        val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
-        // Use KTX edit extension for clarity
-        sharedPref.edit {
-            remove("auth_token")
-            remove("userID")
-        }
+        SharedPrefManager.clearAuthToken(this)
+        SharedPrefManager.clearUserId(this)
 
         val intent = Intent(this, com.example.capstone2.authentication.LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -81,5 +77,3 @@ class DeliveryMainActivity : AppCompatActivity() {
     }
 
 }
-
-

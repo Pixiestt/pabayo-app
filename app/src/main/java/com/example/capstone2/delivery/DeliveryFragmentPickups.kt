@@ -16,6 +16,7 @@ import com.example.capstone2.data.api.ApiService
 import com.example.capstone2.data.models.Request
 import com.example.capstone2.network.ApiClient
 import com.example.capstone2.repository.RequestRepository
+import com.example.capstone2.repository.SharedPrefManager
 import kotlinx.coroutines.launch
 
 class DeliveryFragmentPickups : Fragment(R.layout.fragment_delivery_pickups) {
@@ -42,16 +43,14 @@ class DeliveryFragmentPickups : Fragment(R.layout.fragment_delivery_pickups) {
         requestRepository = RequestRepository(apiService)
 
         // Get token
-        val sharedPreferences = requireContext()
-            .getSharedPreferences("MyAppPrefs", android.content.Context.MODE_PRIVATE)
-        val token = sharedPreferences.getString("auth_token", null)
+        val token = SharedPrefManager.getAuthToken(requireContext())
         if (token.isNullOrEmpty()) {
             Toast.makeText(requireContext(), "Missing auth token", Toast.LENGTH_SHORT).show()
             return
         }
 
         // ✅ Create authenticated ApiService + Repository
-        val authedApiService = ApiClient.getApiService { token }
+        val authedApiService = ApiClient.getApiService { token ?: "" }
         requestRepository = RequestRepository(authedApiService)
 
         // Initialize Adapter

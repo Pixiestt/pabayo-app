@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.capstone2.data.api.ApiService
 import com.example.capstone2.network.ApiClient
 import com.example.capstone2.repository.NotificationRepository
+import com.example.capstone2.repository.SharedPrefManager
 
 /**
  * Factory class for creating NotificationService instances
@@ -17,13 +18,12 @@ object NotificationServiceFactory {
      */
     fun getInstance(context: Context): NotificationService {
         if (instance == null) {
-            // Get token from shared preferences
-            val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-            val token = sharedPreferences.getString("auth_token", "")
-            
+            // Get token from centralized SharedPrefManager
+            val token = SharedPrefManager.getAuthToken(context) ?: ""
+
             // Create API service
-            val apiService = ApiClient.getApiService { token ?: "" }
-            
+            val apiService = ApiClient.getApiService { token }
+
             // Create repository
             val notificationRepository = NotificationRepository(apiService)
             
@@ -32,4 +32,4 @@ object NotificationServiceFactory {
         }
         return instance!!
     }
-} 
+}

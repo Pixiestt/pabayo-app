@@ -17,6 +17,7 @@ import com.example.capstone2.R
 import com.example.capstone2.adapter.OwnerHistoryAdapter
 import com.example.capstone2.network.ApiClient
 import com.example.capstone2.repository.RequestRepository
+import com.example.capstone2.repository.SharedPrefManager
 import com.example.capstone2.viewmodel.OwnerHistoryViewModel
 import com.example.capstone2.viewmodel.OwnerHistoryViewModelFactory
 import com.example.capstone2.data.models.Request
@@ -61,8 +62,7 @@ class OwnerFragmentHistory : Fragment(R.layout.owner_fragment_history) {
         recyclerView.adapter = historyAdapter
 
         // Get token from shared preferences
-        val sharedPreferences = requireContext().getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-        val token = sharedPreferences.getString("auth_token", null)
+        val token = SharedPrefManager.getAuthToken(requireContext())
 
         if (token.isNullOrEmpty()) {
             Toast.makeText(requireContext(), "Missing auth token", Toast.LENGTH_SHORT).show()

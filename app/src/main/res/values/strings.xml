@@ -233,4 +233,8 @@
     <string name="sign_in">Sign in</string>
     <string name="content_desc_id_photo">Identification photo</string>
     <string name="content_desc_back_button">Back</string>
+
+    <!-- Added runtime-configurable API base URL. Change this to your server's address. For emulator use 10.0.2.2 -->
+    <!-- For debugging via adb reverse: device localhost will be forwarded to host's port 8000 -->
+    <string name="api_base_url">http://192.168.1.15:8000/</string>
 </resources>

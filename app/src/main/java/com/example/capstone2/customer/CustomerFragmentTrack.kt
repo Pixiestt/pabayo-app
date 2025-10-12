@@ -22,6 +22,7 @@ import com.example.capstone2.adapter.CustomerTrackAdapter
 import com.example.capstone2.data.models.Request
 import com.example.capstone2.network.ApiClient
 import com.example.capstone2.repository.RequestRepository
+import com.example.capstone2.repository.SharedPrefManager
 import com.example.capstone2.viewmodel.CustomerRequestViewModel
 import com.example.capstone2.viewmodel.CustomerRequestViewModelFactory
 
@@ -76,22 +77,22 @@ class CustomerFragmentTrack : Fragment(R.layout.customer_fragment_track) {
 
         // Register receiver to listen for updates (so list refreshes after edit)
         val filter = IntentFilter("com.example.capstone2.ACTION_REQUEST_UPDATED")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Use the new flags parameter to mark receiver as not exported
+        // Register with explicit NOT_EXPORTED flag to avoid unprotected broadcast lint
+        try {
             requireContext().registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            requireContext().registerReceiver(updateReceiver, filter)
+        } catch (ex: Exception) {
+            // Fallback for very old platforms if needed
+            try { requireContext().registerReceiver(updateReceiver, filter) } catch (_: Exception) {}
         }
 
         // Get token and customer ID from shared preferences
-        val sharedPreferences = requireContext().getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-        val token = sharedPreferences.getString("auth_token", null)
-        customerID = sharedPreferences.getLong("userID", -1L)
+        val token = SharedPrefManager.getAuthToken(requireContext())
+        customerID = SharedPrefManager.getUserId(requireContext()) ?: -1L
 
         // Show customerID in Toast for debugging
         Toast.makeText(requireContext(), "Customer ID: $customerID", Toast.LENGTH_LONG).show()
         Log.d("CustomerTrack", "CustomerID from preferences: $customerID")
-        Log.d("CustomerTrack", "Token: ${token?.take(10)}...")
+        Log.d("CustomerTrack", "Token present=${!token.isNullOrBlank()}")
 
         if (token.isNullOrEmpty()) {
             Toast.makeText(requireContext(), "Missing auth token", Toast.LENGTH_SHORT).show()

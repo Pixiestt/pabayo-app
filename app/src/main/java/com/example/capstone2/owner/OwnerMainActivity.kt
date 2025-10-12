@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.example.capstone2.R
 import com.example.capstone2.messages.MessagesFragment
+import com.example.capstone2.repository.SharedPrefManager
 import com.example.capstone2.util.NotificationUtils
 import com.example.capstone2.util.PermissionUtils
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -89,7 +90,7 @@ class OwnerMainActivity : AppCompatActivity() {
         }
 
         // Restore persisted unread count and update UI if necessary
-        val savedCount = getSharedPreferences("MyAppPrefs", MODE_PRIVATE).getInt("unread_messages_count", 0)
+        val savedCount = SharedPrefManager.getUnreadMessagesCount(this)
         setMessagesUnreadCount(savedCount)
     }
 
@@ -107,8 +108,8 @@ class OwnerMainActivity : AppCompatActivity() {
     // Set unread messages count (updates fragment badge if present and persists count)
     fun setMessagesUnreadCount(count: Int) {
         try {
-            // persist
-            getSharedPreferences("MyAppPrefs", MODE_PRIVATE).edit { putInt("unread_messages_count", count) }
+            // persist via SharedPrefManager (keeps canonical + legacy in sync)
+            SharedPrefManager.saveUnreadMessagesCount(this, count)
             // update currently displayed fragment view if it contains the badge
             val frag = supportFragmentManager.findFragmentById(R.id.flFragment)
             val badge = frag?.view?.findViewById<TextView?>(R.id.tvMessagesBadge)
@@ -123,7 +124,7 @@ class OwnerMainActivity : AppCompatActivity() {
         } catch (_: Exception) {}
     }
 
-    fun getMessagesUnreadCount(): Int = try { getSharedPreferences("MyAppPrefs", MODE_PRIVATE).getInt("unread_messages_count", 0) } catch (_: Exception) { 0 }
+    fun getMessagesUnreadCount(): Int = try { SharedPrefManager.getUnreadMessagesCount(this) } catch (_: Exception) { 0 }
     override fun onRequestPermissionsResult(
         requestCode: Int, 
         permissions: Array<out String>, 
@@ -163,12 +164,9 @@ class OwnerMainActivity : AppCompatActivity() {
 
     // Clear stored auth and navigate to LoginActivity
     private fun performLogout() {
-        val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
-        // Use KTX edit extension for clarity
-        sharedPref.edit {
-            remove("auth_token")
-            remove("userID")
-        }
+        // Centralized clearing to remove token and user id from both pref locations
+        SharedPrefManager.clearAuthToken(this)
+        SharedPrefManager.clearUserId(this)
 
         val intent = Intent(this, com.example.capstone2.authentication.LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
