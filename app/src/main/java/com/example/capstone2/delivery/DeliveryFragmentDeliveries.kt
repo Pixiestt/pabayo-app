@@ -16,6 +16,7 @@ import com.example.capstone2.data.api.ApiService
 import com.example.capstone2.data.models.Request
 import com.example.capstone2.network.ApiClient
 import com.example.capstone2.repository.RequestRepository
+import com.example.capstone2.repository.SharedPrefManager
 import kotlinx.coroutines.launch
 
 class DeliveryFragmentDeliveries : Fragment(R.layout.fragment_delivery_deliveries) {
@@ -34,15 +35,14 @@ class DeliveryFragmentDeliveries : Fragment(R.layout.fragment_delivery_deliverie
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
         // Get token from SharedPreferences
-        val sharedPreferences = requireContext().getSharedPreferences("MyAppPrefs", 0)
-        val token = sharedPreferences.getString("auth_token", null)
+        val token = SharedPrefManager.getAuthToken(requireContext())
         if (token.isNullOrEmpty()) {
             Toast.makeText(requireContext(), "Missing auth token", Toast.LENGTH_SHORT).show()
             return
         }
 
         // Initialize ApiService + Repository
-        apiService = ApiClient.getApiService { token }
+        apiService = ApiClient.getApiService { token ?: "" }
         requestRepository = RequestRepository(apiService)
 
         // Initialize adapter

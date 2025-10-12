@@ -22,6 +22,7 @@ import com.example.capstone2.repository.RequestRepository
 import com.example.capstone2.viewmodel.CustomerRequestViewModel
 import com.example.capstone2.viewmodel.CustomerRequestViewModelFactory
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.example.capstone2.repository.SharedPrefManager
 
 class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
     
@@ -38,9 +39,9 @@ class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
         val view = inflater.inflate(R.layout.customer_fragment_home, container, false)
 
         // Get customer ID from SharedPreferences - using the correct key "userID"
-        val sharedPreferences = requireContext().getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-        customerID = sharedPreferences.getLong("userID", -1)
-        
+        // Use SharedPrefManager to handle legacy and canonical prefs
+        customerID = SharedPrefManager.getUserId(requireContext()) ?: -1L
+
         Log.d("CustomerFragmentHome", "Retrieved customerID: $customerID")
         
         // Initialize ViewModel
@@ -113,23 +114,23 @@ class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
             pendingContainer.removeAllViews()
             
             // Log all requests for debugging
-            Log.d("CustomerQueue", "Total requests received: ${requests.size}")
+            Log.d("CustomerQueue", "Total requests received: ${'$'}{requests.size}")
             requests.forEach { req ->
-                Log.d("CustomerQueue", "Request ID: ${req.requestID}, Status: ${req.statusID}, Service: ${req.serviceName}")
+                Log.d("CustomerQueue", "Request ID: ${'$'}{req.requestID}, Status: ${'$'}{req.statusID}, Service: ${'$'}{req.serviceName}")
             }
-            
+
             // Filter and sort requests
             val processingRequests = requests.filter { 
                 try {
                     val status = it.statusID.toInt()
                     status == 5 // Status 5 = Processing
                 } catch (e: NumberFormatException) {
-                    Log.e("CustomerQueue", "Invalid statusID: ${it.statusID}")
+                    Log.e("CustomerQueue", "Invalid statusID: ${'$'}{it.statusID}")
                     false
                 }
             }
-            
-            val pendingRequests = requests.filter { 
+
+            val pendingRequests = requests.filter {
                 try {
                     val status = it.statusID.toInt()
                     status == 2 || // Status 2 = Delivery boy pickup
@@ -141,19 +142,19 @@ class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
                     status == 11 ||  // Status 11 = Partially Accepted
                     status == 12 // Status 12 = Milling done
                 } catch (e: NumberFormatException) {
-                    Log.e("CustomerQueue", "Invalid statusID: ${it.statusID}")
+                    Log.e("CustomerQueue", "Invalid statusID: ${'$'}{it.statusID}")
                     false
                 }
             }
-            
+
             // Log filtered requests for debugging
-            Log.d("CustomerQueue", "Processing requests: ${processingRequests.size}")
-            Log.d("CustomerQueue", "Pending requests: ${pendingRequests.size}")
-            
+            Log.d("CustomerQueue", "Processing requests: ${'$'}{processingRequests.size}")
+            Log.d("CustomerQueue", "Pending requests: ${'$'}{pendingRequests.size}")
+
             // Add processing requests to left container
             if (processingRequests.isNotEmpty()) {
                 for (request in processingRequests) {
-                    Log.d("CustomerQueue", "Adding processing request ID: ${request.requestID}")
+                    Log.d("CustomerQueue", "Adding processing request ID: ${'$'}{request.requestID}")
                     addRequestItemToContainer(request, processingContainer)
                 }
             } else {
@@ -163,11 +164,11 @@ class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
                 emptyText.setPadding(8, 8, 8, 8)
                 processingContainer.addView(emptyText)
             }
-            
+
             // Add pending requests to right container
             if (pendingRequests.isNotEmpty()) {
                 for (request in pendingRequests) {
-                    Log.d("CustomerQueue", "Adding pending request ID: ${request.requestID}")
+                    Log.d("CustomerQueue", "Adding pending request ID: ${'$'}{request.requestID}")
                     addRequestItemToContainer(request, pendingContainer)
                 }
             } else {
@@ -191,7 +192,7 @@ class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
     private fun addRequestItemToContainer(request: Request, container: LinearLayout) {
         val requestView = TextView(requireContext())
         // Display more useful information than just the request ID
-        requestView.text = "Request #${request.requestID}\nService: ${request.serviceName}\nQuantity: ${request.sackQuantity}"
+        requestView.text = "Request #${'$'}{request.requestID}\nService: ${'$'}{request.serviceName}\nQuantity: ${'$'}{request.sackQuantity}"
         requestView.textSize = 16f
         requestView.setPadding(16, 16, 16, 16)
         requestView.setTextColor(android.graphics.Color.BLACK)

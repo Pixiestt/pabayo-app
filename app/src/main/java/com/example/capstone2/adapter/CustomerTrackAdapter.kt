@@ -217,8 +217,7 @@ class CustomerTrackAdapter(
 
         // Show Edit button only when request status is subject-for-approval (1) and logged-in user is customer
         try {
-            val sp = context.getSharedPreferences("MyAppPrefs", android.content.Context.MODE_PRIVATE)
-            val loggedUserId = sp.getLong("userID", -1L)
+            val loggedUserId = SharedPrefManager.getUserId(context) ?: -1L
             if (request.statusID == 1 && loggedUserId == request.customerID) {
                 btnEdit.visibility = View.VISIBLE
                 btnEdit.setOnClickListener {
@@ -253,7 +252,7 @@ class CustomerTrackAdapter(
                             .commit()
                     } catch (e: Exception) {
                         dialog.dismiss()
-                        android.widget.Toast.makeText(context, "Unable to open chat: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "Unable to open chat: ${'$'}{e.message}", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     dialog.dismiss()

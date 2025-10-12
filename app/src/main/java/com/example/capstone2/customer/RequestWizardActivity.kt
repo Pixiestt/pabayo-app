@@ -17,6 +17,7 @@ import com.example.capstone2.network.ApiClient
 import com.example.capstone2.repository.RequestRepository
 import com.example.capstone2.viewmodel.RequestViewModel
 import com.example.capstone2.viewmodel.RequestViewModelFactory
+import com.example.capstone2.repository.SharedPrefManager
 
 class RequestWizardActivity : AppCompatActivity() {
 
@@ -35,8 +36,7 @@ class RequestWizardActivity : AppCompatActivity() {
         setContentView(R.layout.activity_request_wizard)
 
         // Block users whose account status is pending
-        val sharedPreferences = getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-        val status = sharedPreferences.getString("user_status", "approved")?.trim()?.lowercase()
+        val status = SharedPrefManager.getUserStatus(this).trim().lowercase()
         if (status == "pending") {
             showPendingDialog()
             return
@@ -67,16 +67,15 @@ class RequestWizardActivity : AppCompatActivity() {
     }
 
     private fun setupViewModel() {
-        val sharedPreferences = getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-        val token = sharedPreferences.getString("auth_token", null)
-        
+        val token = SharedPrefManager.getAuthToken(this)
+
         if (token.isNullOrEmpty()) {
             Toast.makeText(this, "Missing auth token", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
         
-        val authedApiService = ApiClient.getApiService { token }
+        val authedApiService = ApiClient.getApiService { token ?: "" }
         val requestRepository = RequestRepository(authedApiService)
         val factory = RequestViewModelFactory(requestRepository, application)
         requestViewModel = ViewModelProvider(this, factory)[RequestViewModel::class.java]
@@ -139,9 +138,8 @@ class RequestWizardActivity : AppCompatActivity() {
     }
     
     fun submitRequest() {
-        val sharedPreferences = getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-        val customerID = sharedPreferences.getLong("userID", -1L)
-        
+        val customerID = SharedPrefManager.getUserId(this) ?: -1L
+
         if (customerID == -1L) {
             Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show()
             return

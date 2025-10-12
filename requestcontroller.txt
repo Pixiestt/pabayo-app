@@ -99,10 +99,10 @@ class RequestController extends Controller
             ]);
 
             try {
-                // Attempt to publish the notification to an interest named for the owner (mobile subscribes to "user_{id}")
-                $interest = "user_{$ownerUserIdString}";
+                // Publish to the interest that the Android app subscribes to: "user_{userID}"
+                $interestName = "user_{$ownerUserIdString}";
                 $beamsClient->publishToInterests(
-                    [$interest], // Target the owner's interest
+                    [$interestName], // Target the interest matching the device subscription
                     [
                         "fcm" => [
                             "notification" => [
@@ -117,7 +117,7 @@ class RequestController extends Controller
                         // Add 'apns' for iOS here if needed
                     ]
                 );
-                Log::info("✅ Pusher Beams: Notified Owner $ownerId about new request {$newRequest->requestID}.");
+                Log::info("✅ Pusher Beams: Published to interest $interestName for new request {$newRequest->requestID}.");
             } catch (\Exception $e) {
                 // Log the error but DO NOT re-throw, as the request was successfully created
                 Log::error('❌ Pusher Beams Publish Error (New Request): ' . $e->getMessage());
@@ -306,32 +306,7 @@ class RequestController extends Controller
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // hanggang dito yung pasted
-
-
-
-
-
-
-
-
 
 
     public function index(Request $request)
@@ -462,10 +437,9 @@ class RequestController extends Controller
             $paymentName = 'Gcash';
         }
 
-
         $requestModel->statusID = 10;
         $requestModel->dateUpdated = now();
-        $requestModel->save(); 
+        $requestModel->save();
 
 
         // ------------------------------------------------------------------------------------
@@ -479,10 +453,10 @@ class RequestController extends Controller
         ]);
 
         try {
-            // Attempt to publish the notification to an interest named for the customer (mobile subscribes to "user_{id}")
-            $interest = "user_{$customerIdString}";
+            // Publish to the interest matching the Android subscription
+            $interestName = "user_{$customerIdString}";
             $beamsClient->publishToInterests(
-                [$interest], // Target the customer's interest
+                [$interestName], // Target the interest for the specific Customer
                 [
                     "fcm" => [
                         "notification" => [
@@ -497,7 +471,7 @@ class RequestController extends Controller
                     // Add 'apns' for iOS here if needed
                 ]
             );
-            Log::info("✅ Pusher Beams: Notified Customer $customerId about accepted request {$requestModel->requestID}.");
+            Log::info("✅ Pusher Beams: Published to interest $interestName for accepted request {$requestModel->requestID}.");
         } catch (\Exception $e) {
             // Log the error but DO NOT re-throw, as the request was successfully updated
             Log::error('❌ Pusher Beams Publish Error (Request Accepted): ' . $e->getMessage());
@@ -505,7 +479,7 @@ class RequestController extends Controller
 
 
 
-        
+
 
         $formatted = [
             'requestID'       => $requestModel->requestID ?? 0,
@@ -667,5 +641,108 @@ class RequestController extends Controller
             \Log::error("Error fetching customer requests: " . $e->getMessage());
             return response()->json([], 500);
         }
+    }
+
+
+    public function getDeliveryBoyRequests()
+    {
+        $requests = RequestModel::with(['customer', 'service', 'payment.method'])
+            ->where(function ($query) {
+                // Include these statuses globally
+                $query->whereIn('statusID', [10, 2, 6]);
+
+                // Include status 12 (Milling Done) only for services that need delivery
+                $query->orWhere(function ($q) {
+                    $q->where('statusID', 12)
+                        ->whereIn('serviceID', [1, 3, 5]); // delivery-related services only
+                });
+            })
+            ->get();
+
+        $formatted = $requests->map(function ($req) {
+            $firstName = $req->customer->firstName ?? '';
+            $lastName = $req->customer->lastName ?? '';
+            $fullName = trim("$firstName $lastName");
+
+            $serviceName = $req->service->serviceName ?? 'Unknown';
+            if ($req->serviceID == 1) {
+                $serviceName = 'All Services';
+            }
+
+            $paymentName = $req->payment->method->modeName ?? 'Unspecified';
+            if ($req->payment && $req->payment->modeID == 1) {
+                $paymentName = 'Cash on Delivery';
+            } elseif ($req->payment && $req->payment->modeID == 2) {
+                $paymentName = 'Gcash';
+            }
+
+            return [
+                'requestID'        => $req->requestID,
+                'ownerID'          => $req->ownerID,
+                'customerID'       => $req->customerID,
+                'customerName'     => $fullName,
+                'serviceID'        => $req->serviceID,
+                'serviceName'      => $serviceName,
+                'statusID'         => $req->statusID,
+                'pickupDate'       => $req->pickupDate,
+                'deliveryDate'     => $req->deliveryDate,
+                'sackQuantity'     => $req->sackQuantity,
+                'comment'          => $req->comment,
+                'pickupLocation'   => $req->pickupLocation ?? '',
+                'deliveryLocation' => $req->deliveryLocation ?? '',
+                'paymentMethod'    => $paymentName,
+                'schedule'         => $req->pickupDate ?? 'Not set',
+                'dateUpdated'      => $req->dateUpdated,
+            ];
+        });
+
+        return response()->json([
+            'requests' => $formatted
+        ]);
+    }
+
+
+    public function markPickupDone($id, Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->roleID !== 4) { // assuming 4 = delivery boy
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $req = RequestModel::findOrFail($id);
+
+        if (!in_array($req->statusID, [10, 2])) {
+            return response()->json(['error' => 'Request is not available for pickup'], 400);
+        }
+
+        $req->statusID = 4;
+        $req->dateUpdated = now();
+        $req->save();
+
+        return response()->json([
+            'message' => 'Pickup completed successfully',
+            'request' => $req
+        ]);
+    }
+
+
+    public function initiatePickup($id, Request $request)
+    {
+        $req = RequestModel::findOrFail($id);
+
+        // Allow initiate only if status is 10 (accepted)
+        if ($req->statusID != 10) {
+            return response()->json(['error' => 'Request is not available for initiation'], 400);
+        }
+
+        $req->statusID = 2; // Pickup in progress
+        $req->dateUpdated = now();
+        $req->save();
+
+        return response()->json([
+            'message' => 'Pickup initiated successfully',
+            'statusID' => $req->statusID
+        ]);
     }
 }

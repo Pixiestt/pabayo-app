@@ -14,6 +14,7 @@ import com.example.capstone2.R
 import com.example.capstone2.adapter.RequestAdapter
 import com.example.capstone2.network.ApiClient
 import com.example.capstone2.repository.RequestRepository
+import com.example.capstone2.repository.SharedPrefManager
 import com.example.capstone2.viewmodel.OwnerRequestViewModel
 import com.example.capstone2.viewmodel.OwnerRequestViewModelFactory
 import kotlinx.coroutines.CoroutineScope
@@ -55,8 +56,7 @@ class OwnerFragmentRequest : Fragment(R.layout.owner_fragment_request) {
         recyclerView.adapter = requestAdapter
 
         // Retrieve token
-        val sharedPreferences = requireContext().getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-        val token = sharedPreferences.getString("auth_token", null)
+        val token = SharedPrefManager.getAuthToken(requireContext())
 
         if (token.isNullOrEmpty()) {
             Toast.makeText(requireContext(), "Missing auth token", Toast.LENGTH_SHORT).show()

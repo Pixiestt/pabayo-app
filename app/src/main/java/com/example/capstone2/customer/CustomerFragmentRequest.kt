@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.example.capstone2.R
+import com.example.capstone2.repository.SharedPrefManager
 
 class CustomerFragmentRequest : Fragment() {
 
@@ -34,8 +35,8 @@ class CustomerFragmentRequest : Fragment() {
         
         btnStartWizard.setOnClickListener {
             // Check the user's account status saved in SharedPreferences
-            val sharedPref = requireContext().getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-            val status = sharedPref.getString("user_status", "approved")?.trim()?.lowercase()
+            // Use SharedPrefManager to transparently handle legacy + canonical prefs
+            val status = SharedPrefManager.getUserStatus(requireContext()).trim().lowercase()
 
             if (status == "pending") {
                 // Show blocking dialog informing user their account is not approved
