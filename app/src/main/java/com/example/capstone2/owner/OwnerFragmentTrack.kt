@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.capstone2.R
 import com.example.capstone2.adapter.RequestAdapter
 import com.example.capstone2.adapter.TrackAdapter
+import com.example.capstone2.data.models.Request
 import com.example.capstone2.network.ApiClient
 import com.example.capstone2.repository.RequestRepository
 import com.example.capstone2.repository.SharedPrefManager
@@ -166,10 +167,12 @@ class OwnerFragmentTrack : Fragment(R.layout.owner_fragment_track) {
 
         ownerRequestViewModel.ownerRequests.observe(viewLifecycleOwner) { requests ->
             val filteredRequests = requests?.filterNot { it.statusID in listOf(1, 8, 9) }
-            trackAdapter.updateRequests(filteredRequests.orEmpty())
+            // Reorder so that the earliest accepted request (statusID == 10) is placed at the top
+            val reordered = filteredRequests?.let { reorderRequests(it) }
+            trackAdapter.updateRequests(reordered.orEmpty())
 
 
-            if (filteredRequests.isNullOrEmpty()) {
+            if (reordered.isNullOrEmpty()) {
                 Toast.makeText(requireContext(), "No requests found matching the filter", Toast.LENGTH_SHORT).show()
             }
         }
@@ -239,5 +242,21 @@ class OwnerFragmentTrack : Fragment(R.layout.owner_fragment_track) {
             }
         } catch (_: Exception) {}
         return null
+    }
+
+    /**
+     * Reorder list so the earliest accepted request (statusID == 10) appears first.
+     * "Earliest" is determined using dateUpdated, falling back to submittedAt, then lexicographic order if needed.
+     */
+    private fun reorderRequests(list: List<Request>): List<Request> {
+        if (list.isEmpty()) return list
+        val accepted = list.filter { it.statusID == 10 }
+        if (accepted.isEmpty()) return list
+        // Choose earliest by (dateUpdated ?: submittedAt ?: "") using lexicographic compare (assuming ISO-like strings)
+        val firstAccepted = accepted.minByOrNull { (it.dateUpdated ?: it.submittedAt) ?: "" }
+            ?: return list
+        if (list.firstOrNull()?.requestID == firstAccepted.requestID) return list // already at top
+        val remainder = list.filter { it.requestID != firstAccepted.requestID }
+        return listOf(firstAccepted) + remainder
     }
 }

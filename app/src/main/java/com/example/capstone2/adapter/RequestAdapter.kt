@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.RecyclerView
@@ -59,7 +60,7 @@ class RequestAdapter(
         notifyDataSetChanged()
     }
     
-    private fun showDetailsDialog(context: android.content.Context, request: Request) {
+    private fun showDetailsDialog(context: Context, request: Request) {
         val dialog = Dialog(context)
         dialog.setContentView(R.layout.dialog_request_details)
         dialog.window?.setLayout(
@@ -78,6 +79,10 @@ class RequestAdapter(
         val tvDetailSubmittedAt: TextView = dialog.findViewById(R.id.tvDetailSubmittedAt)
         val btnClose: Button = dialog.findViewById(R.id.btnClose)
         val btnMessage: Button? = dialog.findViewById(R.id.btnMessage)
+
+        // Hide progress UI for owner view details
+        dialog.findViewById<TextView?>(R.id.tvDetailProgressLabel)?.visibility = View.GONE
+        dialog.findViewById<ProgressBar?>(R.id.progressBarRequest)?.visibility = View.GONE
 
         // Set text values
         tvDetailCustomerName.text = context.getString(R.string.customer_format, request.customerName)

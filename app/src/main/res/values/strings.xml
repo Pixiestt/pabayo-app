@@ -178,6 +178,7 @@
     <string name="dropoff_at_facility">I will drop off the palay at your facility</string>
     <string name="enter_your_location">Enter your location</string>
     <string name="contact_number_loading">Loading…</string>
+    <string name="contact_number_format">Contact number: %1$s</string>
     <string name="action_call">Call</string>
     <string name="action_message">Message</string>
     <string name="action_view_profile">View profile</string>
@@ -237,4 +238,8 @@
     <!-- Added runtime-configurable API base URL. Change this to your server's address. For emulator use 10.0.2.2 -->
     <!-- For debugging via adb reverse: device localhost will be forwarded to host's port 8000 -->
     <string name="api_base_url">http://192.168.1.15:8000/</string>
+
+    <string name="pickup_preparing_message">Driver is preparing for pickup. You\'ll be able to update status after pickup is recorded.</string>
+
+    <string name="service_label">Service:</string>
 </resources>

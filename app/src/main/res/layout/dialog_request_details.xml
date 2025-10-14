@@ -94,22 +94,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btnCall"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/action_call"
-                android:visibility="gone" />
-
-            <Button
-                android:id="@+id/btnCopy"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/copy_debug"
-                android:layout_marginStart="8dp"
-                android:visibility="gone" />
+            android:layout_marginTop="8dp"
+            style="?android:attr/buttonBarStyle">
 
             <Button
                 android:id="@+id/btnMessage"
@@ -117,25 +103,28 @@
                 android:layout_height="wrap_content"
                 android:text="@string/action_message"
                 android:layout_marginStart="8dp"
-                android:visibility="gone" />
+                android:visibility="gone"
+                style="?android:attr/buttonBarButtonStyle" />
 
             <Button
                 android:id="@+id/btnViewProfile"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/action_view_profile"
-                android:layout_marginStart="8dp"
-                android:visibility="gone" />
+                android:layout_gravity="center_horizontal"
+                android:visibility="gone"
+                style="?android:attr/buttonBarButtonStyle" />
         </LinearLayout>
 
-        <!-- Progress label and bar -->
+        <!-- Progress label and bar (hidden by default; customer flow shows explicitly) -->
         <TextView
             android:id="@+id/tvDetailProgressLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/label_progress"
             android:layout_marginTop="12dp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:visibility="gone" />
 
         <ProgressBar
             android:id="@+id/progressBarRequest"
@@ -145,7 +134,8 @@
             android:max="100"
             android:progress="0"
             android:indeterminate="false"
-            android:layout_marginTop="8dp" />
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
 
         <!-- Edit button (visible only when allowed) -->
         <Button
@@ -155,7 +145,8 @@
             android:text="@string/action_edit"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="12dp"
-            android:visibility="gone" />
+            android:visibility="gone"
+            style="?android:attr/buttonBarButtonStyle" />
 
         <Button
             android:id="@+id/btnClose"
@@ -163,6 +154,7 @@
             android:layout_height="wrap_content"
             android:text="@string/close"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="16dp" />
+            android:layout_marginTop="16dp"
+            style="?android:attr/buttonBarButtonStyle" />
     </LinearLayout>
 </ScrollView>

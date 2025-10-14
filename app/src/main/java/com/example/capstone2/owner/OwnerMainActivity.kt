@@ -9,7 +9,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
-import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
@@ -96,13 +95,22 @@ class OwnerMainActivity : AppCompatActivity() {
 
     // Expose a method so child fragments can open history directly
     fun openHistory() {
-        setCurrentFragment(fragmenthistory)
+        // Route via bottom nav to keep selection in sync
+        if (::bottomNavigationView.isInitialized) {
+            bottomNavigationView.selectedItemId = R.id.transaction_history
+        } else {
+            setCurrentFragment(fragmenthistory)
+        }
     }
 
     // Expose a method so child fragments can open messages directly and clear unread badge
     fun openMessages() {
-        val messagesFragment = MessagesFragment()
-        setCurrentFragmentWithBadgeClear(messagesFragment)
+        if (::bottomNavigationView.isInitialized) {
+            bottomNavigationView.selectedItemId = R.id.messages
+        } else {
+            // Fallback
+            setCurrentFragmentWithBadgeClear(fragmentmessages)
+        }
     }
 
     // Set unread messages count (updates fragment badge if present and persists count)
@@ -183,7 +191,7 @@ class OwnerMainActivity : AppCompatActivity() {
     private fun setCurrentFragmentWithBadgeClear(fragment: Fragment) {
         setCurrentFragment(fragment)
         try {
-            if (fragment is com.example.capstone2.messages.MessagesFragment) {
+            if (fragment is MessagesFragment) {
                 setMessagesUnreadCount(0)
             }
         } catch (_: Exception) {}
