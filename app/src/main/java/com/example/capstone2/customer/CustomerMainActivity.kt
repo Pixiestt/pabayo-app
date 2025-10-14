@@ -105,17 +105,15 @@ class CustomerMainActivity : AppCompatActivity() {
             setMessagesUnreadCount(saved)
         } catch (_: Exception) {}
         navigationView.setNavigationItemSelectedListener { menuItem ->
+            // If the drawer destination is also present in the bottom navigation,
+            // drive navigation by selecting the bottom-nav item so the highlight stays in sync.
             when (menuItem.itemId) {
-                R.id.home -> setCurrentFragment(fragmenthome)
-                R.id.request -> setCurrentFragment(fragmentrequest)
-                R.id.track -> setCurrentFragment(fragmenttrack)
-                R.id.history -> setCurrentFragment(fragmenthistory)
-                R.id.messages -> {
-                    setCurrentFragment(fragmentmessages)
-                    // clear unread badge when user opens Messages
-                    setMessagesUnreadCount(0)
+                R.id.home, R.id.request, R.id.track, R.id.messages, R.id.profile -> {
+                    bottomNavigationView.selectedItemId = menuItem.itemId
                 }
-                R.id.profile -> setCurrentFragment(fragmentprofile)
+                R.id.history -> {
+                    setCurrentFragment(fragmenthistory)
+                }
                 R.id.logout -> {
                     // show confirmation dialog instead of immediate logout
                     showLogoutConfirmation()

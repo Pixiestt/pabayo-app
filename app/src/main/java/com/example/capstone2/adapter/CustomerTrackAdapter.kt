@@ -45,7 +45,7 @@ class CustomerTrackAdapter(
             1 -> "Subject for approval"
             2 -> "Delivery boy pickup"
             3 -> "Waiting for customer drop off"
-            4 -> "In Queue"
+            4 -> "Pending"
             5 -> "Processing"
             6 -> "Rider out for delivery"
             7 -> "Waiting for customer to claim"
@@ -108,11 +108,8 @@ class CustomerTrackAdapter(
         // Ensure View Profile button (present in layout) is hidden for the customer "More" dialog
         val btnViewProfile: Button? = dialog.findViewById(R.id.btnViewProfile)
         btnViewProfile?.visibility = View.GONE
-        // View Profile button removed for customer "More" dialog
         // New contact controls
         val tvDetailContact: TextView? = dialog.findViewById(R.id.tvDetailContact)
-        val btnCall: Button? = dialog.findViewById(R.id.btnCall)
-        val btnCopy: Button? = dialog.findViewById(R.id.btnCopy)
 
         // Use formatted string resources to populate the dialog
         tvDetailCustomerName.text = context.getString(R.string.customer_format, request.customerName)
@@ -153,69 +150,34 @@ class CustomerTrackAdapter(
         tvDetailComment.text = context.getString(R.string.comment_format, request.comment ?: "None")
         tvDetailSubmittedAt.text = context.getString(R.string.submitted_at_format, request.submittedAt ?: "Unknown")
 
-        // Contact handling: show contact row and Call/Copy when available
+        // Contact handling: show contact row when available (Call/Copy removed)
         fun showContact(contact: String?) {
             if (tvDetailContact == null) return
             if (contact.isNullOrBlank()) {
                 tvDetailContact.visibility = View.GONE
-                btnCall?.visibility = View.GONE
-                btnCopy?.visibility = View.GONE
             } else {
                 tvDetailContact.visibility = View.VISIBLE
-                tvDetailContact.text = "Contact number: $contact"
-                btnCall?.visibility = View.VISIBLE
-                btnCopy?.visibility = View.VISIBLE
+                tvDetailContact.text = context.getString(com.example.capstone2.R.string.contact_number_format, contact)
             }
         }
 
-        // Wire Call/Copy buttons
-        btnCall?.setOnClickListener {
-            val phone = request.contactNumber
-            if (!phone.isNullOrBlank()) {
-                try {
-                    val dial = android.content.Intent(android.content.Intent.ACTION_DIAL)
-                    dial.data = android.net.Uri.parse("tel:$phone")
-                    context.startActivity(dial)
-                } catch (_: Exception) { android.widget.Toast.makeText(context, "Cannot start dialer", android.widget.Toast.LENGTH_SHORT).show() }
+        // Helper to find an Activity from any Context by walking ContextWrapper.baseContext
+        fun findActivityFromContext(c: android.content.Context): android.app.Activity? {
+            var cur: android.content.Context? = c
+            while (cur is android.content.ContextWrapper) {
+                if (cur is android.app.Activity) return cur
+                val next = try { cur.baseContext } catch (_: Exception) { null }
+                if (next == null || next === cur) break
+                cur = next
             }
+            return null
         }
 
-        btnCopy?.setOnClickListener {
-            val phone = request.contactNumber
-            if (!phone.isNullOrBlank()) {
-                try {
-                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    val clip = android.content.ClipData.newPlainText("contact", phone)
-                    clipboard.setPrimaryClip(clip)
-                    android.widget.Toast.makeText(context, "Contact copied", android.widget.Toast.LENGTH_SHORT).show()
-                } catch (_: Exception) { android.widget.Toast.makeText(context, "Cannot copy", android.widget.Toast.LENGTH_SHORT).show() }
-            }
+        // Close and edit wiring
+        btnClose.setOnClickListener {
+            dialog.dismiss()
         }
 
-        // Initially show contact if available
-        showContact(request.contactNumber)
-
-        // Compute a progress percentage based on statusID and set progress bar + label
-        val progress = when (request.statusID) {
-            1 -> 5   // Subject for approval
-            10 -> 10 // Request Accepted
-            4 -> 30  // In Queue
-            5 -> 50  // Processing
-            11 -> 45 // Partially Accepted
-            2 -> 60  // Delivery boy pickup
-            3 -> 60  // Waiting for customer drop off
-            6 -> 80  // Rider out for delivery
-            7 -> 80  // Waiting for customer pickup
-            8 -> 100 // Completed
-            9 -> 0   // Rejected
-            12 -> 55 //Milling done
-            else -> 0
-        }
-
-        progressBar.progress = progress
-        tvDetailProgressLabel.text = context.getString(R.string.progress_format, progress)
-
-        // Show Edit button only when request status is subject-for-approval (1) and logged-in user is customer
         try {
             val loggedUserId = SharedPrefManager.getUserId(context) ?: -1L
             if (request.statusID == 1 && loggedUserId == request.customerID) {
@@ -252,7 +214,7 @@ class CustomerTrackAdapter(
                             .commit()
                     } catch (e: Exception) {
                         dialog.dismiss()
-                        android.widget.Toast.makeText(context, "Unable to open chat: ${'$'}{e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "Unable to open chat: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     dialog.dismiss()
@@ -261,9 +223,30 @@ class CustomerTrackAdapter(
             }
         }
 
-        btnClose.setOnClickListener {
-            dialog.dismiss()
+        // Initially show contact if available
+        showContact(request.contactNumber)
+
+        // Compute a progress percentage based on statusID and set progress bar + label
+        val progress = when (request.statusID) {
+            1 -> 0    // Subject for approval at 0%
+            10 -> 15  // Request Accepted
+            11 -> 20  // Partially Accepted
+            2, 3 -> 30 // Delivery boy pickup OR Waiting for customer drop off
+            4 -> 40   // Pending
+            5 -> 55   // Processing
+            12 -> 70  // Milling done
+            6, 7 -> 85 // Rider out for delivery OR Waiting for customer to claim
+            13 -> 95  // Delivered
+            8 -> 100  // Completed
+            9 -> 0    // Rejected
+            else -> 0
         }
+
+        // Explicitly show progress UI for customers
+        tvDetailProgressLabel.visibility = View.VISIBLE
+        progressBar.visibility = View.VISIBLE
+        progressBar.progress = progress
+        tvDetailProgressLabel.text = context.getString(R.string.progress_format, progress)
 
         dialog.show()
     }
