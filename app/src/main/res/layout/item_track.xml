@@ -22,6 +22,18 @@
             android:paddingStart="4dp"
             android:paddingEnd="64dp"> <!-- reserve space on the right for the overlayed more button -->
 
+            <!-- New: Request ID displayed at the upper-left of the card -->
+            <TextView
+                android:id="@+id/tvRequestId"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_request_id"
+                android:textStyle="bold"
+                android:textColor="#444444"
+                android:layout_marginBottom="4dp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
             <TextView
                 android:id="@+id/tvCustomerName"
                 android:layout_width="match_parent"

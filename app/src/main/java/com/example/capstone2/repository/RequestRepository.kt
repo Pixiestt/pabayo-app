@@ -23,12 +23,12 @@ class RequestRepository(private val apiService: ApiService) {
         private var ownerRequestsCache: String? = null
     }
 
-    suspend fun createRequest(request: CreateRequest): Response<CreateRequest> {
+    suspend fun createRequest(request: CreateRequest): Response<ResponseBody> {
         Log.d("RequestRepository", "Creating request for customerID: ${request.customerID}")
         return apiService.createRequest(request)
     }
 
-    suspend fun updateRequest(requestId: Long, request: CreateRequest): Response<CreateRequest> {
+    suspend fun updateRequest(requestId: Long, request: CreateRequest): Response<ResponseBody> {
         Log.d("RequestRepository", "Updating request ID: $requestId for customerID: ${request.customerID}")
         return apiService.updateRequest(requestId, request)
     }
