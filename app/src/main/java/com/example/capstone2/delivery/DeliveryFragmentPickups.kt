@@ -27,8 +27,6 @@ class DeliveryFragmentPickups : Fragment(R.layout.fragment_delivery_pickups) {
     private lateinit var apiService: ApiService
     private var deliveryAdapter: DeliveryCardAdapter? = null
 
-    private lateinit var repo: RequestRepository
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -36,42 +34,30 @@ class DeliveryFragmentPickups : Fragment(R.layout.fragment_delivery_pickups) {
         tvNoRequests = view.findViewById(R.id.tvNoRequestsPickups)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
-        // ✅ Initialize ApiService first
-        apiService = ApiClient.apiService // <-- replace with your Retrofit builder
-
-        // 2️⃣ Initialize repository
-        requestRepository = RequestRepository(apiService)
-
-        // Get token
+        // ✅ Initialize ApiService using token
         val token = SharedPrefManager.getAuthToken(requireContext())
         if (token.isNullOrEmpty()) {
             Toast.makeText(requireContext(), "Missing auth token", Toast.LENGTH_SHORT).show()
             return
         }
+        apiService = ApiClient.getApiService { token }
+        requestRepository = RequestRepository(apiService)
 
-        // ✅ Create authenticated ApiService + Repository
-        val authedApiService = ApiClient.getApiService { token ?: "" }
-        requestRepository = RequestRepository(authedApiService)
-
-        // Initialize Adapter
+        // Initialize Adapter - delegate actions to fragment (no direct network inside adapter)
         deliveryAdapter = DeliveryCardAdapter(
             mutableListOf(),
             DeliveryMode.PICKUPS,
-            { request: Request, action: DeliveryAction ->  // Explicit types help Kotlin infer correctly
+            { request: Request, action: DeliveryAction ->
                 when (action) {
-                    DeliveryAction.INITIATE -> {
-                        // Optionally update UI here
-                    }
-                    DeliveryAction.DONE -> {
-                        markPickupDone(request)
-                    }
+                    DeliveryAction.INITIATE -> markPickupInitiated(request)
+                    DeliveryAction.DONE -> markPickupDone(request)
                 }
             },
-            requestRepository  // <- pass the repository here
+            requestRepository
         )
         recyclerView.adapter = deliveryAdapter
 
-        // Fetch approved pickups (statusID = 2)
+        // Fetch pickup-eligible requests
         fetchApprovedPickups()
     }
 
@@ -80,16 +66,32 @@ class DeliveryFragmentPickups : Fragment(R.layout.fragment_delivery_pickups) {
             try {
                 val requests = requestRepository.getDeliveryBoyRequests()
                     .filter { request ->
-                        // Only include services that involve pickup
-                        (request.serviceID == 1L || request.serviceID == 2L || request.serviceID == 5L) &&
-                                // Only include requests currently in pickup-related statuses
-                                (request.statusID == 10 || request.statusID == 2)
+                        // Let backend decide eligibility; only filter by pickup-related statuses
+                        // 10=Request Accepted (ready to initiate pickup), 2=Delivery boy pickup ongoing, 11=Partially accepted (optional)
+                        request.statusID == 10 || request.statusID == 2 || request.statusID == 11
                     }
 
                 deliveryAdapter?.submit(requests)
                 tvNoRequests.visibility = if (requests.isEmpty()) View.VISIBLE else View.GONE
             } catch (e: Exception) {
                 Toast.makeText(requireContext(), "Error fetching requests: ${e.message}", Toast.LENGTH_SHORT).show()
+                tvNoRequests.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    private fun markPickupInitiated(request: Request) {
+        lifecycleScope.launch {
+            try {
+                val response = requestRepository.updateRequestStatus(request.requestID, 2) // 2 = Delivery boy pickup
+                if (response.isSuccessful) {
+                    Toast.makeText(requireContext(), "Pickup initiated", Toast.LENGTH_SHORT).show()
+                    fetchApprovedPickups()
+                } else {
+                    Toast.makeText(requireContext(), "Failed: ${response.code()} ${response.message()}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Error initiating pickup: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -99,6 +101,10 @@ class DeliveryFragmentPickups : Fragment(R.layout.fragment_delivery_pickups) {
             try {
                 val response = requestRepository.markPickupDone(request.requestID)
                 if (response.isSuccessful) {
+                    // Also set status to Pending (4) as per previous behavior
+                    try {
+                        requestRepository.updateRequestStatus(request.requestID, 4)
+                    } catch (_: Exception) { /* ignore */ }
                     Toast.makeText(requireContext(), "Pickup marked done", Toast.LENGTH_SHORT).show()
                     fetchApprovedPickups()
                 } else {
