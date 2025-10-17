@@ -107,8 +107,18 @@ class PickupServiceFragment : Fragment() {
             hasPrefill = true
         }
         wizard.pickupDate?.let { pd ->
-            etPickupDate.setText(pd)
-            hasPrefill = true
+            // Only prefill if the stored date is today or in the future
+            val parsed = try { dateFormat.parse(pd) } catch (_: Exception) { null }
+            val isPast = parsed?.time?.let { it < startOfTodayMillis() } ?: true
+            if (!isPast) {
+                etPickupDate.setText(pd)
+                hasPrefill = true
+            } else {
+                // Clear stale past date from wizard and notify user
+                wizard.pickupDate = null
+                etPickupDate.setText("")
+                Toast.makeText(requireContext(), "Previous pickup date was in the past. Please choose a new date.", Toast.LENGTH_SHORT).show()
+            }
         }
         if (hasPrefill) {
             pickupDetailsContainer.visibility = View.VISIBLE
@@ -208,13 +218,16 @@ class PickupServiceFragment : Fragment() {
         }
         
         etPickupDate.setOnClickListener {
-            DatePickerDialog(
+            val dialog = DatePickerDialog(
                 requireContext(),
                 datePickerListener,
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH)
-            ).show()
+            )
+            // Disallow selecting past dates
+            dialog.datePicker.minDate = startOfTodayMillis()
+            dialog.show()
         }
         
         btnNext.setOnClickListener {
@@ -231,6 +244,17 @@ class PickupServiceFragment : Fragment() {
                 return@setOnClickListener
             }
             
+            // Extra guard: block past dates if somehow present
+            if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromLocation && pickupDate.isNotEmpty()) {
+                val parsed = try { dateFormat.parse(pickupDate) } catch (_: Exception) { null }
+                val isPast = parsed?.time?.let { it < startOfTodayMillis() } ?: true
+                if (isPast) {
+                    etPickupDate.error = "Pickup date can’t be in the past"
+                    Toast.makeText(requireContext(), "Please choose today or a future date.", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+            }
+
             if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromLocation) {
                 activity.getWizardData().pickupLocation = location
             }
@@ -267,5 +291,14 @@ class PickupServiceFragment : Fragment() {
         // visually indicate disabled state
         btnNext.alpha = if (enabled) 1.0f else 0.5f
         Log.d(TAG, "Next button enabled: $enabled")
+    }
+
+    private fun startOfTodayMillis(): Long {
+        val c = Calendar.getInstance()
+        c.set(Calendar.HOUR_OF_DAY, 0)
+        c.set(Calendar.MINUTE, 0)
+        c.set(Calendar.SECOND, 0)
+        c.set(Calendar.MILLISECOND, 0)
+        return c.timeInMillis
     }
 }

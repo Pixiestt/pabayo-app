@@ -12,6 +12,7 @@ import com.example.capstone2.data.models.RequestResponse
 import com.example.capstone2.data.models.User
 import com.example.capstone2.data.models.Message
 import com.example.capstone2.data.models.SendMessageRequest
+import com.example.capstone2.data.models.QueueResponse
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
@@ -120,5 +121,18 @@ interface ApiService {
         @Path("id") requestID: Long
     ): Response<ResponseBody>
 
+    // Optionally fetch requests filtered by statusID; backend may ignore this param if unsupported
+    @GET("api/requests")
+    suspend fun getRequestsByStatus(
+        @Query("statusID") statusID: Int
+    ): Response<RequestResponse>
 
+    // Some backends use 'status' instead of 'statusID'
+    @GET("api/requests")
+    suspend fun getRequestsByStatusName(
+        @Query("status") status: String
+    ): Response<RequestResponse>
+
+    @GET("api/customer/{customerID}/requests/queue")
+    suspend fun getCustomerQueue(@Path("customerID") customerID: Long): Response<QueueResponse>
 }

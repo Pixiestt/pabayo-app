@@ -242,4 +242,25 @@
     <string name="pickup_preparing_message">Driver is preparing for pickup. You\'ll be able to update status after pickup is recorded.</string>
 
     <string name="service_label">Service:</string>
+
+    <!-- New strings for delivery and pickup status/buttons -->
+    <string name="status_pickup_ongoing">Pickup ongoing</string>
+    <string name="status_pickup_done">Pickup done</string>
+    <string name="status_ongoing_delivery">Ongoing delivery</string>
+    <string name="status_delivery_done">Delivery done</string>
+    <string name="status_milling_ready_delivery">Milling done – ready for delivery</string>
+    <string name="action_initiate_delivery">Initiate Delivery</string>
+    <string name="action_delivery_done">Delivery Done</string>
+
+    <!-- Queue dialog messages -->
+    <string name="no_processing_requests">No processing requests</string>
+    <string name="no_pending_requests">No pending requests</string>
+    <string name="request_number">Request #%1$s</string>
+    <string name="debug_other_statuses_present">(debug) Other statuses present: %1$s</string>
+
+    <!-- Indicate when only the current customer’s requests are being shown due to global access not being available -->
+    <string name="queue_scope_customer_only">Showing your requests (global queue unavailable for this account)</string>
+
+    <string name="total_processing_count">Total: %1$d</string>
+    <string name="total_pending_count">Total: %1$d</string>
 </resources>
