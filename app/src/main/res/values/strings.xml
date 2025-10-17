@@ -263,4 +263,9 @@
 
     <string name="total_processing_count">Total: %1$d</string>
     <string name="total_pending_count">Total: %1$d</string>
+
+    <string name="label_pickup_time">Pickup Time (optional)</string>
+    <string name="hint_pickup_time">Select pickup time</string>
+
+    <string name="beams_instance_id">REPLACE_WITH_YOUR_BEAMS_INSTANCE_ID</string>
 </resources>

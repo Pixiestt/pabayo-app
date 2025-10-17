@@ -23,6 +23,7 @@ class TrackAdapter(
 ) : RecyclerView.Adapter<TrackAdapter.TrackViewHolder>() {
 
     inner class TrackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val tvRequestId: TextView = itemView.findViewById(R.id.tvRequestId)
         val customerName: TextView = itemView.findViewById(R.id.tvCustomerName)
         val tvSackQty: TextView = itemView.findViewById(R.id.tvSackQty)
         val tvServices: TextView = itemView.findViewById(R.id.tvServices)
@@ -55,6 +56,9 @@ class TrackAdapter(
     override fun onBindViewHolder(holder: TrackViewHolder, position: Int) {
         val req = requests[position]
         val ctx = holder.itemView.context
+
+        // Show Request ID at upper-left
+        holder.tvRequestId.text = ctx.getString(R.string.request_id_format, req.requestID)
 
         holder.customerName.text = req.customerName
         holder.tvSackQty.text = ctx.getString(R.string.sacks_format, req.sackQuantity)

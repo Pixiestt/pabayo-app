@@ -157,6 +157,7 @@ class RequestWizardActivity : AppCompatActivity() {
             serviceID = serviceID,
             statusID = 1L,
             pickupDate = requestWizardData.pickupDate ?: "",
+            pickupTime = requestWizardData.pickupTime,
             deliveryDate = null,
             sackQuantity = requestWizardData.sackCount,
             comment = requestWizardData.comment ?: "",
@@ -198,6 +199,7 @@ class RequestWizardActivity : AppCompatActivity() {
         requestWizardData.sackCount = req.sackQuantity
         requestWizardData.comment = req.comment
         requestWizardData.pickupDate = if (!req.pickupDate.isNullOrEmpty()) req.pickupDate else null
+        requestWizardData.pickupTime = req.pickupTime
         requestWizardData.pickupLocation = req.pickupLocation
         requestWizardData.deliveryLocation = req.deliveryLocation
 

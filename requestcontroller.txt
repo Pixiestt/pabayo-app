@@ -15,6 +15,62 @@ use Pusher\PushNotifications\PushNotifications;
 class RequestController extends Controller
 {
     /**
+     * Map internal status IDs to friendly labels.
+     */
+    private function friendlyStatusLabel($statusId): string
+    {
+        $map = [
+            1  => 'Pending Approval',
+            2  => 'Pickup In Progress',
+            4  => 'Pickup Completed',
+            6  => 'Out for Delivery',
+            9  => 'Rejected',
+            10 => 'Accepted',
+            12 => 'Milling Done',
+        ];
+        return $map[$statusId] ?? ('Status #' . $statusId);
+    }
+
+    /**
+     * Normalize an incoming pickup time string to HH:MM (24h) when possible.
+     */
+    private function normalizePickupTime(?string $time): ?string
+    {
+        if (!$time) { return null; }
+        try {
+            return \Carbon\Carbon::parse($time)->format('H:i');
+        } catch (\Throwable $e) {
+            // Fallbacks for common formats
+            $candidates = ['H:i', 'H:i:s', 'g:i A', 'g:i a', 'h:i A', 'h:i a'];
+            foreach ($candidates as $fmt) {
+                try {
+                    return \Carbon\Carbon::createFromFormat($fmt, $time)->format('H:i');
+                } catch (\Throwable $e2) {
+                    // continue
+                }
+            }
+            // As a final fallback, accept already-looking HH:MM
+            if (preg_match('/^\\d{1,2}:\\d{2}(?::\\d{2})?$/', $time)) {
+                try {
+                    return \Carbon\Carbon::createFromFormat('H:i', substr($time, 0, 5))->format('H:i');
+                } catch (\Throwable $e3) {
+                    return null;
+                }
+            }
+            return null;
+        }
+    }
+
+    /** Determine if Beams pushes are allowed (credentials + feature flag). */
+    private function canSendBeams(): bool
+    {
+        $enabled    = filter_var(env('PUSHER_BEAMS_ENABLED', false), FILTER_VALIDATE_BOOLEAN);
+        $instanceId = env('PUSHER_BEAMS_INSTANCE_ID');
+        $secretKey  = env('PUSHER_BEAMS_SECRET_KEY');
+        return $enabled && !empty($instanceId) && !empty($secretKey);
+    }
+
+    /**
      * Centralized helper to send a Beams push notification to a specific user (customer)
      * for any request status-related change.
      */
@@ -22,22 +78,19 @@ class RequestController extends Controller
     {
         if (!$requestModel) { return; }
 
+        if (!$this->canSendBeams()) {
+            Log::info('Beams disabled or credentials missing; skipping push.');
+            return;
+        }
+
         // Safeguard: ensure we have customerID
         $customerId = $requestModel->customerID ?? null;
         if (!$customerId) { return; }
 
-        // Verify Beams credentials exist to avoid runtime exceptions
-        $instanceId = env('PUSHER_BEAMS_INSTANCE_ID');
-        $secretKey  = env('PUSHER_BEAMS_SECRET_KEY');
-        if (empty($instanceId) || empty($secretKey)) {
-            Log::warning('⚠️ Beams credentials missing; skipping push.');
-            return;
-        }
-
         try {
             $beams = new PushNotifications([
-                'instanceId' => $instanceId,
-                'secretKey'  => $secretKey,
+                'instanceId' => env('PUSHER_BEAMS_INSTANCE_ID'),
+                'secretKey'  => env('PUSHER_BEAMS_SECRET_KEY'),
             ]);
 
             $interest = 'user_' . (string)$customerId;
@@ -69,23 +122,6 @@ class RequestController extends Controller
         }
     }
 
-    /**
-     * Map internal status IDs to friendly labels.
-     */
-    private function friendlyStatusLabel($statusId): string
-    {
-        $map = [
-            1  => 'Pending Approval',
-            2  => 'Pickup In Progress',
-            4  => 'Pickup Completed',
-            6  => 'Out for Delivery',
-            9  => 'Rejected',
-            10 => 'Accepted',
-            12 => 'Milling Done',
-        ];
-        return $map[$statusId] ?? ('Status #' . $statusId);
-    }
-
     public function store(Request $request)
     {
         Log::info('➡️ Reached store() method');
@@ -98,6 +134,7 @@ class RequestController extends Controller
                 'serviceID'     => 'required|exists:services_tbl,serviceID',
                 'statusID'      => 'required|exists:status_tbl,statusID',
                 'pickupDate'    => 'nullable|string',
+                'pickupTime'    => 'nullable|string',
                 'deliveryDate'  => 'nullable|string',
                 'sackQuantity'  => 'nullable|integer',
                 'comment'       => 'nullable|string|max:300',
@@ -115,6 +152,8 @@ class RequestController extends Controller
                 $validated['deliveryDate'] = \Carbon\Carbon::createFromFormat('m/d/Y', $validated['deliveryDate'])->format('Y-m-d');
             }
 
+            // Normalize pickupTime if provided
+            $normalizedPickupTime = $this->normalizePickupTime($request->input('pickupTime'));
 
             $validated['courierID'] = 1;
 
@@ -126,6 +165,7 @@ class RequestController extends Controller
             $newRequest = RequestModel::create($validated);
             $newRequest->pickupLocation = $request->input('pickupLocation');
             $newRequest->deliveryLocation = $request->input('deliveryLocation');
+            $newRequest->pickupTime = $normalizedPickupTime; // NEW: save pickup time
             $newRequest->save();
 
             // Always create a payment
@@ -164,35 +204,37 @@ class RequestController extends Controller
             $ownerUserIdString = (string)$ownerId;
             $customerName = $fullName;
 
-            // Initialize Pusher Beams Client (Must be done inside the try block)
-            $beamsClient = new PushNotifications([
-                'instanceId' => env('PUSHER_BEAMS_INSTANCE_ID'),
-                'secretKey' => env('PUSHER_BEAMS_SECRET_KEY'),
-            ]);
+            // Initialize Pusher Beams Client (only if enabled and configured)
+            if ($this->canSendBeams()) {
+                try {
+                    $beamsClient = new PushNotifications([
+                        'instanceId' => env('PUSHER_BEAMS_INSTANCE_ID'),
+                        'secretKey' => env('PUSHER_BEAMS_SECRET_KEY'),
+                    ]);
 
-            try {
-                // Publish to the interest that the Android app subscribes to: "user_{userID}"
-                $interestName = "user_{$ownerUserIdString}";
-                $beamsClient->publishToInterests(
-                    [$interestName], // Target the interest matching the device subscription
-                    [
-                        "fcm" => [
-                            "notification" => [
-                                "title" => "New Request from $customerName",
-                                "body" => "A new request (ID: {$newRequest->requestID}) is awaiting your approval.",
+                    // Publish to the interest that the Android app subscribes to: "user_{userID}"
+                    $interestName = "user_{$ownerUserIdString}";
+                    $beamsClient->publishToInterests(
+                        [$interestName],
+                        [
+                            'fcm' => [
+                                'notification' => [
+                                    'title' => "New Request from $customerName",
+                                    'body'  => "A new request (ID: {$newRequest->requestID}) is awaiting your approval.",
+                                ],
+                                'data' => [
+                                    'type' => 'new_request',
+                                    'request_id' => $newRequest->requestID,
+                                ]
                             ],
-                            "data" => [
-                                "type" => "new_request",
-                                "request_id" => $newRequest->requestID,
-                            ]
-                        ],
-                        // Add 'apns' for iOS here if needed
-                    ]
-                );
-                Log::info("✅ Pusher Beams: Published to interest $interestName for new request {$newRequest->requestID}.");
-            } catch (\Exception $e) {
-                // Log the error but DO NOT re-throw, as the request was successfully created
-                Log::error('❌ Pusher Beams Publish Error (New Request): ' . $e->getMessage());
+                        ]
+                    );
+                    Log::info("✅ Pusher Beams: Published to interest $interestName for new request {$newRequest->requestID}.");
+                } catch (\Throwable $e) {
+                    Log::error('❌ Pusher Beams Publish Error (New Request): ' . $e->getMessage());
+                }
+            } else {
+                Log::info('ℹ️ Skipping Beams publish in store(): disabled or not configured.');
             }
 
             $formatted = [
@@ -205,6 +247,7 @@ class RequestController extends Controller
                 'courierID'       => $newRequest->courierID ?? 0,
                 'statusID'        => $newRequest->statusID ?? 0,
                 'pickupDate'      => $newRequest->pickupDate ?? '',
+                'pickupTime'      => $newRequest->pickupTime ?? null, // NEW
                 'paymentMethod'   => $paymentName ?: '',
                 'deliveryDate'    => $newRequest->deliveryDate ?? '',
                 'sackQuantity'    => $newRequest->sackQuantity ?? 0,
@@ -254,6 +297,7 @@ class RequestController extends Controller
                 'statusID'       => 'required|exists:status_tbl,statusID',
                 'courierID'      => 'nullable|integer',
                 'pickupDate'     => 'nullable|string',
+                'pickupTime'     => 'nullable|string',
                 'deliveryDate'   => 'nullable|string',
                 'sackQuantity'   => 'nullable|integer',
                 'comment'        => 'nullable|string|max:300',
@@ -294,12 +338,16 @@ class RequestController extends Controller
                 }
             }
 
+            // Normalize pickup time (if any)
+            $normalizedPickupTime = $this->normalizePickupTime($request->input('pickupTime'));
+
             // Update allowed fields
             $requestModel->ownerID = $validated['ownerID'] ?? $requestModel->ownerID;
             $requestModel->serviceID = $validated['serviceID'] ?? $requestModel->serviceID;
             $requestModel->courierID = $validated['courierID'] ?? ($requestModel->courierID ?? 1);
             $requestModel->statusID = $validated['statusID'] ?? $requestModel->statusID;
             $requestModel->pickupDate = array_key_exists('pickupDate', $validated) ? $validated['pickupDate'] : $requestModel->pickupDate;
+            $requestModel->pickupTime = $normalizedPickupTime !== null ? $normalizedPickupTime : $requestModel->pickupTime; // NEW
             $requestModel->deliveryDate = array_key_exists('deliveryDate', $validated) ? $validated['deliveryDate'] : $requestModel->deliveryDate;
             $requestModel->sackQuantity = $validated['sackQuantity'] ?? $requestModel->sackQuantity;
             $requestModel->comment = $validated['comment'] ?? $requestModel->comment;
@@ -347,6 +395,7 @@ class RequestController extends Controller
                 'courierID'        => $requestModel->courierID ?? 0,
                 'statusID'         => $requestModel->statusID ?? 0,
                 'pickupDate'       => $requestModel->pickupDate ?? '',
+                'pickupTime'       => $requestModel->pickupTime ?? null, // NEW
                 'paymentMethod'    => $paymentName ?: '',
                 'deliveryDate'     => $requestModel->deliveryDate ?? '',
                 'sackQuantity'     => $requestModel->sackQuantity ?? 0,
@@ -417,6 +466,7 @@ class RequestController extends Controller
                 'sackQuantity'    => $req->sackQuantity,
                 'serviceName'     => $serviceName,
                 'schedule'        => $req->pickupDate ?? 'Not set',
+                'pickupTime'      => $req->pickupTime ?? null, // NEW
                 'paymentMethod'   => $paymentName,
                 'comment'         => $req->comment,
                 'submittedAt'     => $req->dateCreated ?? $req->created_at?->toDateString(),
@@ -463,6 +513,7 @@ class RequestController extends Controller
                 'courierID'       => $req->courierID,
                 'statusID'        => $req->statusID,
                 'pickupDate'      => $req->pickupDate,
+                'pickupTime'      => $req->pickupTime ?? null, // NEW
                 'paymentMethod'   => $paymentName,
                 'deliveryDate'    => $req->deliveryDate,
                 'sackQuantity'    => $req->sackQuantity,
@@ -518,6 +569,7 @@ class RequestController extends Controller
             'courierID'       => $requestModel->courierID ?? 0,
             'statusID'        => $requestModel->statusID ?? 0,
             'pickupDate'      => $requestModel->pickupDate ?? '',
+            'pickupTime'      => $requestModel->pickupTime ?? null, // NEW
             'paymentMethod'   => $paymentName ?: '',
             'deliveryDate'    => $requestModel->deliveryDate ?? '',
             'sackQuantity'    => $requestModel->sackQuantity ?? 0,
@@ -593,6 +645,7 @@ class RequestController extends Controller
             'courierID'       => $requestModel->courierID ?? 0,
             'statusID'        => $requestModel->statusID ?? 0,
             'pickupDate'      => $requestModel->pickupDate ?? '',
+            'pickupTime'      => $requestModel->pickupTime ?? null, // NEW
             'paymentMethod'   => $paymentName ?: '',
             'deliveryDate'    => $requestModel->deliveryDate ?? '',
             'sackQuantity'    => $requestModel->sackQuantity ?? 0,
@@ -648,6 +701,7 @@ class RequestController extends Controller
                     'courierID' => $req->courierID,
                     'statusID' => $req->statusID,
                     'pickupDate' => $req->pickupDate,
+                    'pickupTime' => $req->pickupTime ?? null, // NEW
                     'paymentMethod' => $paymentName,
                     'deliveryDate' => $req->deliveryDate,
                     'sackQuantity' => $req->sackQuantity,
@@ -710,6 +764,7 @@ class RequestController extends Controller
                 'serviceName'      => $serviceName,
                 'statusID'         => $req->statusID,
                 'pickupDate'       => $req->pickupDate,
+                'pickupTime'       => $req->pickupTime ?? null, // NEW
                 'deliveryDate'     => $req->deliveryDate,
                 'sackQuantity'     => $req->sackQuantity,
                 'comment'          => $req->comment,
@@ -824,6 +879,7 @@ class RequestController extends Controller
                     'statusID'         => $req->statusID, // preserve original
                     'friendlyStatus'   => $this->friendlyStatusLabel($req->statusID),
                     'pickupDate'       => $req->pickupDate,
+                    'pickupTime'       => $req->pickupTime ?? null, // NEW
                     'deliveryDate'     => $req->deliveryDate,
                     'sackQuantity'     => $req->sackQuantity,
                     'comment'          => $req->comment,

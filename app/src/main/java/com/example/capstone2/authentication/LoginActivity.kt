@@ -35,8 +35,8 @@ import com.example.capstone2.util.NotificationUtils
 class LoginActivity : AppCompatActivity() {
 
     companion object {
-        // TODO: replace with your actual Beams instance id
-        private const val BEAMS_INSTANCE_ID = "8c4f8907-19a5-4d60-8de2-39344b7156da"
+        // Keep as fallback in case the string resource is not configured
+        private const val FALLBACK_BEAMS_INSTANCE_ID = "8c4f8907-19a5-4d60-8de2-39344b7156da"
     }
 
     private lateinit var userViewModel: UserViewModel
@@ -157,18 +157,27 @@ class LoginActivity : AppCompatActivity() {
                         }
 
                         // -----------------------------------------------------------------
-                        // NEW: Pusher Beams User Authentication (defensive)
+                        // Pusher Beams: start + subscribe to interest
                         // -----------------------------------------------------------------
                         val authToken = SharedPrefManager.getAuthToken(this)
                         if (!authToken.isNullOrBlank()) {
                             try {
-                                PushNotifications.start(applicationContext, BEAMS_INSTANCE_ID)
+                                // Read instance id from resources; fallback to constant if placeholder not replaced
+                                val configured = getString(R.string.beams_instance_id)
+                                val instanceId = if (configured.isNullOrBlank() ||
+                                    configured == "REPLACE_WITH_YOUR_BEAMS_INSTANCE_ID")
+                                    FALLBACK_BEAMS_INSTANCE_ID else configured
+
+                                PushNotifications.start(applicationContext, instanceId)
+                                Log.d("PusherBeams", "PushNotifications.start with instanceId=$instanceId")
                             } catch (e: Exception) {
                                 Log.w("PusherBeams", "PushNotifications.start threw: ${e.message}")
                             }
 
                             try {
                                 val interest = "user_${user?.userID ?: "unknown"}"
+                                // Ensure we only have the current user interest
+                                try { PushNotifications.clearDeviceInterests() } catch (_: Exception) {}
                                 PushNotifications.addDeviceInterest(interest)
                                 Log.d("PusherBeams", "Subscribed device to interest: $interest")
                             } catch (e: Exception) {

@@ -25,7 +25,7 @@ interface ApiService {
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
     @POST("api/requests")
-    suspend fun createRequest(@Body request: CreateRequest): Response<CreateRequest>
+    suspend fun createRequest(@Body request: CreateRequest): Response<ResponseBody>
 
     @GET("api/requests")
     suspend fun getRequests(): Response<RequestResponse>
@@ -85,7 +85,7 @@ interface ApiService {
     suspend fun updateRequest(
         @Path("requestID") requestID: Long,
         @Body request: CreateRequest
-    ): Response<CreateRequest>
+    ): Response<ResponseBody>
 
     // Chat endpoints
     @GET("api/messages/conversation")
