@@ -80,6 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // delivery boy
     Route::put('/requests/{id}/initiate', [RequestController::class, 'initiatePickup']);
     Route::post('/requests/{id}/pickup-done', [RequestController::class, 'markPickupDone']);
+
     Route::get('/deliveryboy/requests', [RequestController::class, 'getDeliveryBoyRequests']);
 
 
@@ -87,8 +88,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 
-    
-    
+    Route::get('/customer/{customerID}/requests', [RequestController::class, 'getCustomerRequests']);
 
-
+    Route::get('/customer/{customerID}/requests/queue', [RequestController::class, 'getCustomerRequestQueue']);
 });

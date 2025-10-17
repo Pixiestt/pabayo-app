@@ -1,6 +1,5 @@
 package com.example.capstone2.customer
 
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -16,13 +15,15 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.capstone2.R
-import com.example.capstone2.data.api.ApiClient
+import com.example.capstone2.data.models.QueueResponse
 import com.example.capstone2.data.models.Request
 import com.example.capstone2.repository.RequestRepository
 import com.example.capstone2.viewmodel.CustomerRequestViewModel
 import com.example.capstone2.viewmodel.CustomerRequestViewModelFactory
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.example.capstone2.repository.SharedPrefManager
+import com.example.capstone2.network.ApiClient as AuthApiClient
+import com.example.capstone2.network.getTokenProvider
 
 class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
     
@@ -44,8 +45,8 @@ class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
 
         Log.d("CustomerFragmentHome", "Retrieved customerID: $customerID")
         
-        // Initialize ViewModel
-        val apiService = ApiClient.apiService
+        // Initialize ViewModel with AUTHORIZED ApiService so requests include Authorization header
+        val apiService = AuthApiClient.getApiService(getTokenProvider(requireContext()))
         val repository = RequestRepository(apiService)
         val viewModelFactory = CustomerRequestViewModelFactory(repository)
         customerRequestViewModel = ViewModelProvider(this, viewModelFactory)[CustomerRequestViewModel::class.java]
@@ -71,19 +72,17 @@ class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
         }
         
         viewQueueBtn.setOnClickListener {
-            // Fetch requests and show queue dialog
+            Log.d("CustomerFragmentHome", "Fetching queue + ALL + customer requests for queue view")
+            // Preferred: dedicated queue endpoint
             if (customerID > 0) {
-                Log.d("CustomerFragmentHome", "Fetching requests for customer ID: $customerID")
-                customerRequestViewModel.fetchCustomerRequests(customerID)
-                showQueueDialog()
-            } else {
-                Log.e("CustomerFragmentHome", "Invalid customerID: $customerID")
-                AlertDialog.Builder(requireContext())
-                    .setTitle("Error")
-                    .setMessage("Could not retrieve your account information. Please log in again.")
-                    .setPositiveButton("OK", null)
-                    .show()
+                customerRequestViewModel.fetchCustomerQueue(customerID)
             }
+            // Fallbacks
+            customerRequestViewModel.fetchAllRequests()
+            if (customerID > 0) {
+                customerRequestViewModel.fetchCustomerRequests(customerID)
+            }
+            showQueueDialog()
         }
         
         return view
@@ -106,80 +105,129 @@ class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
         
         val processingContainer = dialogView.findViewById<LinearLayout>(R.id.processingContainer)
         val pendingContainer = dialogView.findViewById<LinearLayout>(R.id.pendingContainer)
-        
-        // Observe requests for queue display
-        customerRequestViewModel.customerRequests.observe(viewLifecycleOwner) { requests ->
-            // Clear previous views
+        val processingHeader = dialogView.findViewById<TextView>(R.id.processingHeaderText)
+        val pendingHeader = dialogView.findViewById<TextView>(R.id.pendingHeaderText)
+        val scopeNote = dialogView.findViewById<TextView>(R.id.queueScopeNote)
+
+        // Ensure we don't stack multiple observers if user opens dialog repeatedly
+        customerRequestViewModel.allRequests.removeObservers(viewLifecycleOwner)
+        customerRequestViewModel.customerRequests.removeObservers(viewLifecycleOwner)
+        customerRequestViewModel.queueData.removeObservers(viewLifecycleOwner)
+
+        // Hold latest snapshots
+        var latestAll: List<Request>? = null
+        var latestCustomer: List<Request>? = null
+        var latestQueue: QueueResponse? = null
+
+        fun renderQueue(queue: QueueResponse, source: String) {
             processingContainer.removeAllViews()
             pendingContainer.removeAllViews()
-            
-            // Log all requests for debugging
-            Log.d("CustomerQueue", "Total requests received: ${'$'}{requests.size}")
-            requests.forEach { req ->
-                Log.d("CustomerQueue", "Request ID: ${'$'}{req.requestID}, Status: ${'$'}{req.statusID}, Service: ${'$'}{req.serviceName}")
-            }
 
-            // Filter and sort requests
-            val processingRequests = requests.filter { 
-                try {
-                    val status = it.statusID.toInt()
-                    status == 5 // Status 5 = Processing
-                } catch (e: NumberFormatException) {
-                    Log.e("CustomerQueue", "Invalid statusID: ${'$'}{it.statusID}")
-                    false
-                }
-            }
+            val processingRequests = queue.processing
+            val pendingRequests = queue.pending
 
-            val pendingRequests = requests.filter {
-                try {
-                    val status = it.statusID.toInt()
-                    status == 2 || // Status 2 = Delivery boy pickup
-                    status == 3 || // Status 3 = Waiting for customer drop off
-                    status == 4 || // Status 4 = Pending
-                    status == 6 || // Status 6 = Rider out for delivery
-                    status == 7 || // Status 7 = Waiting for customer pickup
-                    status == 10 || // Status 10 = Request Accepted
-                    status == 11 ||  // Status 11 = Partially Accepted
-                    status == 12 // Status 12 = Milling done
-                } catch (e: NumberFormatException) {
-                    Log.e("CustomerQueue", "Invalid statusID: ${'$'}{it.statusID}")
-                    false
-                }
-            }
+            processingHeader.text = getString(R.string.rb_processing) + "  " + getString(R.string.total_processing_count, processingRequests.size)
+            pendingHeader.text = getString(R.string.rb_pending) + "  " + getString(R.string.total_pending_count, pendingRequests.size)
 
-            // Log filtered requests for debugging
-            Log.d("CustomerQueue", "Processing requests: ${'$'}{processingRequests.size}")
-            Log.d("CustomerQueue", "Pending requests: ${'$'}{pendingRequests.size}")
-
-            // Add processing requests to left container
             if (processingRequests.isNotEmpty()) {
-                for (request in processingRequests) {
-                    Log.d("CustomerQueue", "Adding processing request ID: ${'$'}{request.requestID}")
-                    addRequestItemToContainer(request, processingContainer)
-                }
+                processingRequests.forEach { addRequestItemToContainer(it, processingContainer) }
             } else {
                 val emptyText = TextView(requireContext())
-                emptyText.text = "No processing requests"
+                emptyText.text = getString(R.string.no_processing_requests)
                 emptyText.textAlignment = View.TEXT_ALIGNMENT_CENTER
                 emptyText.setPadding(8, 8, 8, 8)
                 processingContainer.addView(emptyText)
             }
 
-            // Add pending requests to right container
             if (pendingRequests.isNotEmpty()) {
-                for (request in pendingRequests) {
-                    Log.d("CustomerQueue", "Adding pending request ID: ${'$'}{request.requestID}")
-                    addRequestItemToContainer(request, pendingContainer)
-                }
+                pendingRequests.forEach { addRequestItemToContainer(it, pendingContainer) }
             } else {
                 val emptyText = TextView(requireContext())
-                emptyText.text = "No pending requests"
+                emptyText.text = getString(R.string.no_pending_requests)
                 emptyText.textAlignment = View.TEXT_ALIGNMENT_CENTER
                 emptyText.setPadding(8, 8, 8, 8)
                 pendingContainer.addView(emptyText)
             }
+
+            scopeNote.visibility = if (source == "customer") View.VISIBLE else View.GONE
         }
-        
+
+        fun renderFromFlatList(requests: List<Request>, source: String) {
+            processingContainer.removeAllViews()
+            pendingContainer.removeAllViews()
+
+            // Use real backend status IDs
+            val PENDING = setOf(1) // Pending Approval
+            val PROCESSING = setOf(10, 2, 4, 6, 12) // Accepted, Pickup In Progress, Pickup Completed, Out for Delivery, Milling Done
+
+            val processingRequests = requests.filter { it.statusID in PROCESSING }
+            val pendingRequests = requests.filter { it.statusID in PENDING }
+
+            processingHeader.text = getString(R.string.rb_processing) + "  " + getString(R.string.total_processing_count, processingRequests.size)
+            pendingHeader.text = getString(R.string.rb_pending) + "  " + getString(R.string.total_pending_count, pendingRequests.size)
+
+            if (processingRequests.isNotEmpty()) {
+                processingRequests.forEach { addRequestItemToContainer(it, processingContainer) }
+            } else {
+                val emptyText = TextView(requireContext())
+                emptyText.text = getString(R.string.no_processing_requests)
+                emptyText.textAlignment = View.TEXT_ALIGNMENT_CENTER
+                emptyText.setPadding(8, 8, 8, 8)
+                processingContainer.addView(emptyText)
+            }
+            if (pendingRequests.isNotEmpty()) {
+                pendingRequests.forEach { addRequestItemToContainer(it, pendingContainer) }
+            } else {
+                val emptyText = TextView(requireContext())
+                emptyText.text = getString(R.string.no_pending_requests)
+                emptyText.textAlignment = View.TEXT_ALIGNMENT_CENTER
+                emptyText.setPadding(8, 8, 8, 8)
+                pendingContainer.addView(emptyText)
+            }
+
+            scopeNote.visibility = if (source == "customer") View.VISIBLE else View.GONE
+        }
+
+        fun chooseAndRender() {
+            when {
+                // Prefer backend-provided queue grouping
+                latestQueue != null && ((latestQueue?.pending?.isNotEmpty() == true) || (latestQueue?.processing?.isNotEmpty() == true)) -> {
+                    Log.d("CustomerQueue", "Using QUEUE data for display")
+                    renderQueue(latestQueue!!, "customer")
+                }
+                // Fallback to customer flat list (normalized elsewhere if needed)
+                !latestCustomer.isNullOrEmpty() -> {
+                    Log.d("CustomerQueue", "Queue empty; using CUSTOMER flat list")
+                    renderFromFlatList(latestCustomer!!, "customer")
+                }
+                // Last resort: ALL
+                !latestAll.isNullOrEmpty() -> {
+                    Log.d("CustomerQueue", "No customer data; falling back to ALL requests")
+                    renderFromFlatList(latestAll!!, "all")
+                }
+                else -> {
+                    // No data: show empties
+                    renderQueue(QueueResponse(), "customer")
+                }
+            }
+        }
+
+        // Observe QUEUE
+        customerRequestViewModel.queueData.observe(viewLifecycleOwner) { queue ->
+            latestQueue = queue
+            chooseAndRender()
+        }
+        // Observe ALL requests
+        customerRequestViewModel.allRequests.observe(viewLifecycleOwner) { requests ->
+            latestAll = requests
+            chooseAndRender()
+        }
+        // Observe customer-only requests (fallback)
+        customerRequestViewModel.customerRequests.observe(viewLifecycleOwner) { requests ->
+            latestCustomer = requests
+            chooseAndRender()
+        }
+
         val dialogBuilder = AlertDialog.Builder(requireContext())
             .setView(dialogView)
             .setTitle("Queue Status")
@@ -191,8 +239,8 @@ class CustomerFragmentHome : Fragment(R.layout.customer_fragment_home) {
     
     private fun addRequestItemToContainer(request: Request, container: LinearLayout) {
         val requestView = TextView(requireContext())
-        // Display more useful information than just the request ID
-        requestView.text = "Request #${'$'}{request.requestID}\nService: ${'$'}{request.serviceName}\nQuantity: ${'$'}{request.sackQuantity}"
+        // Per requirement: show only the Request ID
+        requestView.text = getString(R.string.request_number, request.requestID.toString())
         requestView.textSize = 16f
         requestView.setPadding(16, 16, 16, 16)
         requestView.setTextColor(android.graphics.Color.BLACK)

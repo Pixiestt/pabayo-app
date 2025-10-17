@@ -29,6 +29,13 @@
             android:text="Customer: John Doe" />
 
         <TextView
+            android:id="@+id/tvSacks"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Sacks: 0" />
+
+        <TextView
             android:id="@+id/tvStatusLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -64,5 +71,3 @@
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>
-
-
