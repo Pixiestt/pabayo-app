@@ -285,8 +285,10 @@ class TrackAdapter(
             val tvDetailSubmittedAt: TextView = dlgView.findViewById(R.id.tvDetailSubmittedAt)
             val tvDetailContact: TextView = dlgView.findViewById(R.id.tvDetailContact)
             val tvDetailPaymentAmount: TextView = dlgView.findViewById(R.id.tvDetailPaymentAmount)
+            val tvDetailMilledKg: TextView = dlgView.findViewById(R.id.tvDetailMilledKg)
             val btnMsg: Button = dlgView.findViewById(R.id.btnMessage)
             val btnViewProfile: Button = dlgView.findViewById(R.id.btnViewProfile)
+            val btnMarkComplete: Button = dlgView.findViewById(R.id.btnMarkComplete)
             val btnClose: Button = dlgView.findViewById(R.id.btnClose)
             val tvDetailProgressLabel: TextView? = dlgView.findViewById(R.id.tvDetailProgressLabel)
             val progressBarRequest: ProgressBar? = dlgView.findViewById(R.id.progressBarRequest)
@@ -311,6 +313,15 @@ class TrackAdapter(
             } else {
                 tvDetailPaymentAmount.visibility = View.VISIBLE
                 tvDetailPaymentAmount.text = ctx.getString(R.string.payment_amount_not_set)
+            }
+
+            // Milled kg in dialog
+            val kg = req.milledKg
+            if (kg != null && kg >= 0.0) {
+                tvDetailMilledKg.visibility = View.VISIBLE
+                tvDetailMilledKg.text = ctx.getString(R.string.milled_kg_format, kg)
+            } else {
+                tvDetailMilledKg.visibility = View.GONE
             }
 
             // Initially show either the static contact if present or a loading state and fetch
@@ -374,6 +385,33 @@ class TrackAdapter(
                 }
             } else {
                 btnMsg.visibility = View.GONE
+            }
+
+            // NEW: Mark as Complete button (visible unless already Completed or Rejected)
+            val showMarkComplete = currentStatus !in setOf(8, 9, 13)
+            if (showMarkComplete) {
+                btnMarkComplete.visibility = View.VISIBLE
+                btnMarkComplete.setOnClickListener {
+                    // Confirm and update to Completed (8)
+                    try {
+                        androidx.appcompat.app.AlertDialog.Builder(ctx)
+                            .setTitle(R.string.mark_as_complete)
+                            .setMessage(R.string.confirm_mark_complete_message)
+                            .setPositiveButton(R.string.confirm) { d, _ ->
+                                d.dismiss()
+                                dialog.dismiss()
+                                onButtonClick(req, 8)
+                            }
+                            .setNegativeButton(R.string.cancel) { d, _ -> d.dismiss() }
+                            .show()
+                    } catch (_: Exception) {
+                        // Fallback without dialog
+                        dialog.dismiss()
+                        onButtonClick(req, 8)
+                    }
+                }
+            } else {
+                btnMarkComplete.visibility = View.GONE
             }
 
             dialog.show()

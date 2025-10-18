@@ -334,6 +334,59 @@ class OwnerFragmentHistory : Fragment(R.layout.owner_fragment_history) {
                 strokeWidth = 1f
             }
 
+            // Layout metrics
+            val leftMargin = 36f
+            val rightMargin = 36f
+            val topMargin = 48f
+            val bottomMargin = 48f
+            val contentWidth = pageWidth - leftMargin - rightMargin
+
+            // Column widths as percentages of content width. Sum ~= 1.0f
+            val colPercents = floatArrayOf(
+                0.08f, // ID
+                0.24f, // Customer (wider)
+                0.33f, // Service (widest)
+                0.13f, // Date (slightly smaller)
+                0.07f, // Sacks (narrow)
+                0.15f  // Amount
+            )
+            val colWidths = colPercents.map { it * contentWidth }
+            val colLefts = FloatArray(colWidths.size)
+            var acc = leftMargin
+            for (i in colWidths.indices) {
+                colLefts[i] = acc
+                acc += colWidths[i]
+            }
+
+            fun ellipsizeToWidth(text: String, paint: Paint, maxWidth: Float): String {
+                if (maxWidth <= 0f) return ""
+                if (paint.measureText(text) <= maxWidth) return text
+                val ellipsis = "…"
+                val ellWidth = paint.measureText(ellipsis)
+                val limit = maxWidth - ellWidth
+                if (limit <= 0f) return ellipsis
+                var low = 0
+                var high = text.length
+                var best = 0
+                while (low <= high) {
+                    val mid = (low + high) / 2
+                    val w = paint.measureText(text, 0, mid)
+                    if (w <= limit) {
+                        best = mid
+                        low = mid + 1
+                    } else high = mid - 1
+                }
+                return if (best <= 0) ellipsis else text.substring(0, best) + ellipsis
+            }
+
+            fun drawTextInColumn(canvas: Canvas, raw: String, colIndex: Int, alignRight: Boolean, paint: Paint, baselineY: Float) {
+                val colLeft = colLefts[colIndex]
+                val colWidth = colWidths[colIndex]
+                val text = ellipsizeToWidth(raw, paint, colWidth - 4f)
+                val x = if (alignRight) colLeft + colWidth - paint.measureText(text) - 2f else colLeft + 2f
+                canvas.drawText(text, x, baselineY, paint)
+            }
+
             var pageNumber = 1
             var y = 0f
             lateinit var currentPage: PdfDocument.Page
@@ -343,49 +396,72 @@ class OwnerFragmentHistory : Fragment(R.layout.owner_fragment_history) {
                 val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create()
                 currentPage = doc.startPage(pageInfo)
                 canvas = currentPage.canvas
-                y = 40f
+                y = topMargin
                 // Title
-                canvas.drawText("Capstone – Owner Transaction History", 40f, y, titlePaint)
-                y += 30f
-                // Header row
-                var x = 40f
-                canvas.drawText("ID", x, y, headerPaint); x += 50f
-                canvas.drawText("Customer", x, y, headerPaint); x += 160f
-                canvas.drawText("Service", x, y, headerPaint); x += 130f
-                canvas.drawText("Date", x, y, headerPaint); x += 110f
-                canvas.drawText("Sacks", x, y, headerPaint); x += 60f
-                canvas.drawText("Amount", x, y, headerPaint)
-                // underline
+                canvas.drawText("Capstone – Owner Transaction History", leftMargin, y, titlePaint)
+                y += 26f
+                // Header
+                val headers = arrayOf("ID", "Customer", "Service", "Date", "Sacks", "Amount")
+                for (i in headers.indices) {
+                    val rightAlign = (i >= 4)
+                    drawTextInColumn(canvas, headers[i], i, rightAlign, headerPaint, y)
+                }
                 y += 6f
-                canvas.drawLine(40f, y, (pageWidth - 40).toFloat(), y, linePaint)
+                canvas.drawLine(leftMargin, y, pageWidth - rightMargin, y, linePaint)
                 y += 12f
             }
 
             startNewPage()
 
+            // Track running total of amounts
+            var totalAmount = 0.0
+
             for (req in requests) {
-                if (y > pageHeight - 60) {
+                if (y > pageHeight - bottomMargin) {
                     doc.finishPage(currentPage)
                     pageNumber++
                     startNewPage()
                 }
-                var x = 40f
-                canvas.drawText(req.requestID.toString(), x, y, textPaint); x += 50f
-                canvas.drawText(if (req.customerName.length <= 18) req.customerName else req.customerName.substring(0,17) + "…", x, y, textPaint); x += 160f
-                canvas.drawText(if (req.serviceName.length <= 16) req.serviceName else req.serviceName.substring(0,15) + "…", x, y, textPaint); x += 130f
+                val idStr = req.requestID.toString()
+                val custStr = req.customerName
+                val svcStr = req.serviceName
                 val dateStr = req.dateUpdated?.let { if (it.length >= 10) it.substring(0,10) else it }
                     ?: req.deliveryDate?.let { if (it.length >= 10) it.substring(0,10) else it }
                     ?: req.submittedAt?.let { if (it.length >= 10) it.substring(0,10) else it }
                     ?: ""
-                canvas.drawText(dateStr, x, y, textPaint); x += 110f
-                canvas.drawText(req.sackQuantity.toString(), x, y, textPaint); x += 60f
-                val amt: Double? = req.paymentAmount
-                    ?: req.payment?.amount
-                    ?: req.payment?.amountString?.toDoubleOrNull()
+                val sacksStr = req.sackQuantity.toString()
+                val amt: Double? = req.paymentAmount ?: req.payment?.amount ?: req.payment?.amountString?.toDoubleOrNull()
                 val amtStr = if (amt != null) "₱" + String.format(Locale.getDefault(), "%.2f", amt) else "-"
-                canvas.drawText(amtStr, x, y, textPaint)
-                y += 18f
+
+                // Accumulate total if amount is present
+                if (amt != null) totalAmount += amt
+
+                // Draw row
+                drawTextInColumn(canvas, idStr, 0, false, textPaint, y)
+                drawTextInColumn(canvas, custStr, 1, false, textPaint, y)
+                drawTextInColumn(canvas, svcStr, 2, false, textPaint, y)
+                drawTextInColumn(canvas, dateStr, 3, false, textPaint, y)
+                drawTextInColumn(canvas, sacksStr, 4, true, textPaint, y)
+                drawTextInColumn(canvas, amtStr, 5, true, textPaint, y)
+
+                y += 20f // slightly more vertical spacing per row
             }
+
+            // Ensure there's space for total section; if not, start a new page
+            val spaceNeededForTotal = 28f
+            if (y + spaceNeededForTotal > pageHeight - bottomMargin) {
+                doc.finishPage(currentPage)
+                pageNumber++
+                startNewPage()
+            }
+
+            // Draw separator and TOTAL row
+            canvas.drawLine(leftMargin, y, pageWidth - rightMargin, y, linePaint)
+            y += 14f
+            drawTextInColumn(canvas, "TOTAL", 4, true, headerPaint, y)
+            val totalStr = "₱" + String.format(Locale.getDefault(), "%.2f", totalAmount)
+            drawTextInColumn(canvas, totalStr, 5, true, headerPaint, y)
+            y += 6f
 
             // Close last page
             doc.finishPage(currentPage)
