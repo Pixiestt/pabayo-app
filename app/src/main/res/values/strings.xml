@@ -318,4 +318,7 @@
     <string name="enter_customer_name">Enter customer name</string>
     <string name="enter_request_id">Enter request ID</string>
     <string name="apply">Apply</string>
+
+    <!-- Confirmation for owner mark-as-complete action in More dialog -->
+    <string name="confirm_mark_complete_message">Are you sure you want to mark this request as completed?</string>
 </resources>

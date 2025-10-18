@@ -132,6 +132,16 @@
                 android:layout_gravity="center_horizontal"
                 android:visibility="gone"
                 style="?android:attr/buttonBarButtonStyle" />
+
+            <!-- NEW: Mark as Complete button for owner -->
+            <Button
+                android:id="@+id/btnMarkComplete"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/mark_as_complete"
+                android:layout_marginStart="8dp"
+                android:visibility="gone"
+                style="?android:attr/buttonBarButtonStyle" />
         </LinearLayout>
 
         <!-- Progress label and bar (hidden by default; customer flow shows explicitly) -->
