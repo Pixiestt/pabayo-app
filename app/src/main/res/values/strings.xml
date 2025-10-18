@@ -289,4 +289,18 @@
     <string name="label_payment_amount">Payment amount:</string>
     <string name="payment_amount_format">Payment amount: ₱%1$.2f</string>
     <string name="payment_amount_not_set">Payment amount: Not set</string>
+
+    <string name="completed_on_format">Completed on: %1$s</string>
+    <string name="view_details">View Details</string>
+    <string name="hide_details">Hide Details</string>
+    <string name="completed_label">Completed</string>
+
+    <!-- Owner-side: kg input and auto calculation (₱10/kg) -->
+    <string name="set_kg_and_amount_title">Milling output</string>
+    <string name="set_kg_and_amount_message">Enter the rice weight (in kilograms). Amount will be auto-calculated at ₱10.00 per kilo. You can adjust the amount if needed.</string>
+    <string name="hint_milled_kg">Rice weight (kg)</string>
+    <string name="hint_amount_auto">Amount (auto)</string>
+    <string name="rate_per_kilo_note">Rate: ₱10.00 / kilo</string>
+    <string name="invalid_kg_message">Please enter a valid milled weight in kilograms</string>
+    <string name="milled_kg_format">Total rice kg: %1$.2f kg</string>
 </resources>

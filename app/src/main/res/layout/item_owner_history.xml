@@ -29,14 +29,14 @@
                     android:id="@+id/tvCompletionDate"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Completed on: May 15, 2025"
+                    android:text="@string/not_available"
                     android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tvServiceName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Service: Wash and Fold"
+                    android:text="@string/service_label"
                     android:layout_marginTop="4dp" />
             </LinearLayout>
 
@@ -44,7 +44,7 @@
                 android:id="@+id/btnViewDetails"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="View Details"
+                android:text="@string/view_details"
                 style="@style/Widget.MaterialComponents.Button.TextButton" />
         </LinearLayout>
 
@@ -67,30 +67,47 @@
                 android:id="@+id/tvRequestId"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Request ID: 12345"
+                android:text="@string/label_request_id"
                 android:layout_marginTop="4dp" />
 
             <TextView
                 android:id="@+id/tvCustomerName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Customer: John Doe"
+                android:text="@string/label_customer"
                 android:layout_marginTop="4dp" />
 
             <TextView
                 android:id="@+id/tvSackQuantity"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sack Quantity: 2"
+                android:text="@string/label_sacks"
                 android:layout_marginTop="4dp" />
 
             <TextView
                 android:id="@+id/tvStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Status: Completed"
+                android:text="@string/label_status"
                 android:textStyle="bold"
                 android:layout_marginTop="4dp" />
+
+            <!-- New: Payment amount -->
+            <TextView
+                android:id="@+id/tvPaymentAmount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/payment_amount_not_set" />
+
+            <!-- New: Milled kilograms (hidden by default, shown when available) -->
+            <TextView
+                android:id="@+id/tvMilledKg"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:visibility="gone"
+                android:text="" />
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

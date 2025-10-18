@@ -41,5 +41,7 @@ data class Request(
     // NEW: optional payment amount set by owner when Milling done; support multiple backend keys
     @SerializedName(value = "paymentAmount", alternate = ["payment_amount", "amount", "price", "total_amount"]) val paymentAmount: Double? = null,
     // NEW: alternatively, some backends nest the payment details
-    val payment: PaymentInfo? = null
+    val payment: PaymentInfo? = null,
+    // NEW: store milled rice weight (kg) if provided by backend
+    @SerializedName(value = "milledKg", alternate = ["milled_kg", "milledWeightKg", "milled_weight_kg"]) val milledKg: Double? = null
 ) : Parcelable

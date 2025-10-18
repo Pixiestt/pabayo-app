@@ -174,7 +174,58 @@ class OwnerRequestViewModel(
         }
     }
     
-    // NEW: Set payment amount then update status in one flow
+    // NEW: Set milled kg and payment amount then update status in one flow
+    fun setMilledAndPaymentThenUpdateStatus(
+        requestID: Long,
+        milledKg: Double,
+        amount: Double,
+        newStatusID: Int,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                Log.d("OwnerRequestViewModel", "Setting milledKg=$milledKg, amount=$amount for request=$requestID then updating status to $newStatusID")
+                val setResp = repository.setMilledAndPayment(requestID, milledKg, amount)
+                if (!setResp.isSuccessful) {
+                    val msg = buildServerErrorMessage(setResp, fallback = "Failed to set milled kg and amount (${setResp.code()})")
+                    onError(msg)
+                    return@launch
+                }
+
+                // Optimistically update local list so UI reflects immediately
+                _ownerRequests.value = _ownerRequests.value?.map { existing ->
+                    if (existing.requestID == requestID) existing.copy(paymentAmount = amount, milledKg = milledKg) else existing
+                }
+
+                // Now update status
+                val updResp = repository.updateRequestStatus(requestID, newStatusID)
+                if (updResp.isSuccessful) {
+                    // Update cached list
+                    val updatedList = _ownerRequests.value?.map { existingRequest ->
+                        if (existingRequest.requestID == requestID) existingRequest.copy(statusID = newStatusID) else existingRequest
+                    }
+                    updatedList?.let { _ownerRequests.value = it }
+
+                    // Notify
+                    val request = _ownerRequests.value?.find { it.requestID == requestID }
+                    request?.let {
+                        val notificationService = NotificationServiceFactory.getInstance(getApplication())
+                        notificationService.notifyCustomerStatusUpdate(it, newStatusID)
+                    }
+                    onSuccess()
+                } else {
+                    val msg = buildServerErrorMessage(updResp, fallback = "Failed to update status after setting milled kg and amount (${updResp.code()})")
+                    onError(msg)
+                }
+            } catch (e: Exception) {
+                Log.e("OwnerRequestViewModel", "Error setting milled kg and amount then updating status", e)
+                onError("${e.localizedMessage}")
+            }
+        }
+    }
+
+    // NEW: Set payment amount then update status in one flow (legacy)
     fun setPaymentAmountThenUpdateStatus(
         requestID: Long,
         amount: Double,
@@ -242,6 +293,28 @@ class OwnerRequestViewModel(
             } else fallback
         } catch (_: Exception) {
             fallback
+        }
+    }
+
+    /**
+     * Get text description for status ID
+     */
+    private fun getStatusText(statusId: Int): String {
+        return when (statusId) {
+            1 -> "Subject for approval"
+            2 -> "Delivery boy pickup"
+            3 -> "Waiting for customer drop off"
+            4 -> "Pending"
+            5 -> "Processing"
+            6 -> "Rider out for delivery"
+            7 -> "Waiting for customer pickup"
+            8 -> "Completed"
+            9 -> "Rejected"
+            10 -> "Request Accepted"
+            11 -> "Partially Accepted"
+            12 -> "Milling done"
+            13 -> "Delivered"
+            else -> "Unknown status"
         }
     }
 }

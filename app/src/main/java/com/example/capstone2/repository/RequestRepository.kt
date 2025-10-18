@@ -135,6 +135,19 @@ class RequestRepository(private val apiService: ApiService) {
         return apiService.setPaymentAmount(requestId, body)
     }
 
+    // NEW: set milled output (kg) and payment amount in a single request body
+    suspend fun setMilledAndPayment(requestId: Long, milledKg: Double, amount: Double): Response<ResponseBody> {
+        Log.d("RequestRepository", "Setting milledKg=$milledKg and amount=$amount for request ID: $requestId")
+        val body = mapOf(
+            "milledKg" to milledKg,
+            "milled_kg" to milledKg, // provide alternate key for flexible backends
+            "amount" to amount,
+            "paymentAmount" to amount,
+            "payment_amount" to amount
+        )
+        return apiService.setPaymentAmount(requestId, body)
+    }
+
     suspend fun getCustomerRequests(customerID: Long): Response<List<Request>> {
         Log.d("RequestRepository", "Getting customer requests for customerID: $customerID")
         val maxAttempts = 2

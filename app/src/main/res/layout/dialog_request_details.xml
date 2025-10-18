@@ -87,6 +87,15 @@
             android:text="@string/payment_amount_not_set"
             android:visibility="gone" />
 
+        <!-- NEW: Milled kg row -->
+        <TextView
+            android:id="@+id/tvDetailMilledKg"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/milled_kg_format"
+            android:visibility="gone" />
+
         <!-- Contact row: visible when contact info is known or loading -->
         <TextView
             android:id="@+id/tvDetailContact"

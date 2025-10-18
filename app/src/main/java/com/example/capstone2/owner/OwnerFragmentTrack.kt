@@ -182,9 +182,9 @@ class OwnerFragmentTrack : Fragment(R.layout.owner_fragment_track) {
     }
 
     private fun updateRequestStatus(request: Request, newStatusID: Int) {
-        // If updating to Milling done, prompt for payment amount first
+        // If updating to Milling done, prompt for kg first and auto-calc amount
         if (newStatusID == 12) {
-            showAmountDialogAndProceed(request)
+            showKgAndAmountDialogAndProceed(request)
             return
         }
         ownerRequestViewModel.updateStatus(request.requestID, newStatusID,
@@ -198,32 +198,66 @@ class OwnerFragmentTrack : Fragment(R.layout.owner_fragment_track) {
         )
     }
 
-    private fun showAmountDialogAndProceed(request: Request) {
+    private fun showKgAndAmountDialogAndProceed(request: Request) {
         val ctx = requireContext()
-        val input = android.widget.EditText(ctx).apply {
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-            hint = getString(R.string.enter_amount_hint)
-        }
+        val density = resources.displayMetrics.density
+        val pad = (16 * density).toInt()
         val container = android.widget.LinearLayout(ctx).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            val pad = (16 * resources.displayMetrics.density).toInt()
             setPadding(pad, pad, pad, 0)
-            addView(input)
         }
+
+        val tvNote = android.widget.TextView(ctx).apply {
+            text = getString(R.string.rate_per_kilo_note)
+            setPadding(0, 0, 0, (8 * density).toInt())
+        }
+        val inputKg = android.widget.EditText(ctx).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            hint = getString(R.string.hint_milled_kg)
+        }
+        val inputAmount = android.widget.EditText(ctx).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            hint = getString(R.string.hint_amount_auto)
+        }
+
+        // Auto-calc amount when kg changes (₱10 per kilo)
+        inputKg.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val kg = s?.toString()?.trim()?.toDoubleOrNull()
+                if (kg != null) {
+                    val amt = kg * 10.0
+                    inputAmount.setText(String.format(java.util.Locale.US, "%.2f", amt))
+                }
+            }
+        })
+
+        container.addView(tvNote)
+        container.addView(inputKg)
+        container.addView(inputAmount)
+
         androidx.appcompat.app.AlertDialog.Builder(ctx)
-            .setTitle(getString(R.string.set_payment_amount_title))
-            .setMessage(getString(R.string.set_payment_amount_message))
+            .setTitle(getString(R.string.set_kg_and_amount_title))
+            .setMessage(getString(R.string.set_kg_and_amount_message))
             .setView(container)
             .setPositiveButton(R.string.confirm) { dialog, _ ->
-                val text = input.text?.toString()?.trim().orEmpty()
-                val amount = text.toDoubleOrNull()
+                val kgText = inputKg.text?.toString()?.trim().orEmpty()
+                val amountText = inputAmount.text?.toString()?.trim().orEmpty()
+                val kg = kgText.toDoubleOrNull()
+                val amount = amountText.toDoubleOrNull()
+                if (kg == null || kg <= 0) {
+                    Toast.makeText(ctx, getString(R.string.invalid_kg_message), Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
                 if (amount == null || amount < 0.0) {
                     Toast.makeText(ctx, getString(R.string.invalid_amount_message), Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-                // Proceed: set amount then update status to 12
-                ownerRequestViewModel.setPaymentAmountThenUpdateStatus(
+                // Proceed: set kg + amount then update status to 12
+                ownerRequestViewModel.setMilledAndPaymentThenUpdateStatus(
                     requestID = request.requestID,
+                    milledKg = kg,
                     amount = amount,
                     newStatusID = 12,
                     onSuccess = {
@@ -231,7 +265,20 @@ class OwnerFragmentTrack : Fragment(R.layout.owner_fragment_track) {
                         ownerRequestViewModel.fetchOwnerRequests()
                     },
                     onError = { err ->
+                        // Fallback: try amount-only in case backend doesn't accept kg yet
                         Toast.makeText(ctx, err, Toast.LENGTH_SHORT).show()
+                        ownerRequestViewModel.setPaymentAmountThenUpdateStatus(
+                            requestID = request.requestID,
+                            amount = amount,
+                            newStatusID = 12,
+                            onSuccess = {
+                                Toast.makeText(ctx, getString(R.string.payment_amount_set_and_status_updated), Toast.LENGTH_SHORT).show()
+                                ownerRequestViewModel.fetchOwnerRequests()
+                            },
+                            onError = { e2 ->
+                                Toast.makeText(ctx, e2, Toast.LENGTH_LONG).show()
+                            }
+                        )
                     }
                 )
                 dialog.dismiss()

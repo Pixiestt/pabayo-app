@@ -265,6 +265,8 @@ class RequestController extends Controller
                 'submittedAt'     => $newRequest->dateCreated ?? ($newRequest->created_at ? $newRequest->created_at->toDateString() : ''),
                 'pickupLocation'  => $newRequest->pickupLocation ?? '',  // Add this line
                 'deliveryLocation' => $newRequest->deliveryLocation ?? '', // Add this line
+                // Add milled kg so client can reflect it when present (future-proof)
+                'milledKg'        => $newRequest->milled_kg ?? null,
             ];
 
             return response()->json([
@@ -417,6 +419,8 @@ class RequestController extends Controller
                 // Optional fields - include if present on model
                 'feedsConversion'  => $requestModel->feedsConversion ?? false,
                 'millingType'      => $requestModel->millingType ?? null,
+                // Include milled kg for client
+                'milledKg'         => $requestModel->milled_kg ?? null,
             ];
 
             return response()->json([
@@ -480,6 +484,8 @@ class RequestController extends Controller
                 'paymentAmount'   => ($req->payment ? $req->payment->amount : null), // NEW
                 'comment'         => $req->comment,
                 'submittedAt'     => $req->dateCreated ?? $req->created_at?->toDateString(),
+                // Include milled kg
+                'milledKg'        => $req->milled_kg ?? null,
             ];
         });
 
@@ -534,6 +540,8 @@ class RequestController extends Controller
                 'submittedAt'     => $req->dateCreated ?? $req->created_at?->toDateString(),
                 'pickupLocation'  => $req->pickupLocation ?? '',
                 'deliveryLocation' => $req->deliveryLocation ?? '',
+                // Include milled kg
+                'milledKg'        => $req->milled_kg ?? null,
             ];
         });
 
@@ -591,6 +599,8 @@ class RequestController extends Controller
             'submittedAt'     => $requestModel->dateCreated ?? ($requestModel->created_at ? $requestModel->created_at->toDateString() : ''),
             'pickupLocation'  => $requestModel->pickupLocation ?? '',
             'deliveryLocation'=> $requestModel->deliveryLocation ?? '',
+            // Include milled kg
+            'milledKg'        => $requestModel->milled_kg ?? null,
         ];
 
         return response()->json([
@@ -668,6 +678,8 @@ class RequestController extends Controller
             'submittedAt'     => $requestModel->dateCreated ?? ($requestModel->created_at ? $requestModel->created_at->toDateString() : ''),
             'pickupLocation'  => $requestModel->pickupLocation ?? '',
             'deliveryLocation' => $requestModel->deliveryLocation ?? '',
+            // Include milled kg
+            'milledKg'         => $requestModel->milled_kg ?? null,
         ];
 
         return response()->json([
@@ -725,6 +737,8 @@ class RequestController extends Controller
                     'submittedAt' => $req->dateCreated ?? $req->created_at?->toDateString(),
                     'pickupLocation' => $req->pickupLocation,  // Add this line
                     'deliveryLocation' => $req->deliveryLocation,  // Add this line
+                    // Include milled kg
+                    'milledKg'        => $req->milled_kg ?? null,
                 ];
             });
 
@@ -788,6 +802,8 @@ class RequestController extends Controller
                 'paymentAmount'    => ($req->payment ? $req->payment->amount : null), // NEW
                 'schedule'         => $req->pickupDate ?? 'Not set',
                 'dateUpdated'      => $req->dateUpdated,
+                // Include milled kg
+                'milledKg'         => $req->milled_kg ?? null,
             ];
         });
 
@@ -905,6 +921,8 @@ class RequestController extends Controller
                     'schedule'         => $req->pickupDate ?? 'Not set',
                     'dateUpdated'      => $req->dateUpdated,
                     'submittedAt'      => $req->dateCreated ?? ($req->created_at ? $req->created_at->toDateString() : null),
+                    // Include milled kg
+                    'milledKg'         => $req->milled_kg ?? null,
                 ];
             };
 
@@ -929,20 +947,42 @@ class RequestController extends Controller
     {
         Log::info('➡️ setPaymentAmount() for requestID=' . $id);
         try {
-            // 1) Validate
+            // 1) Validate flexible inputs (aliases supported)
             $validated = $request->validate([
-                'amount' => 'required|numeric|min:0|max:999999.99',
+                'amount'          => 'nullable|numeric|min:0|max:999999.99',
+                'paymentAmount'   => 'nullable|numeric|min:0|max:999999.99',
+                'payment_amount'  => 'nullable|numeric|min:0|max:999999.99',
+                'milledKg'        => 'nullable|numeric|min:0|max:999999.99',
+                'milled_kg'       => 'nullable|numeric|min:0|max:999999.99',
             ]);
-            $amount = (float) $validated['amount'];
 
-            // 2) Load request with relations
+            // 2) Resolve aliases
+            $kg = $request->input('milledKg', $request->input('milled_kg'));
+            $amount = $request->input('amount',
+                        $request->input('paymentAmount',
+                        $request->input('payment_amount')));
+
+            // 3) If amount missing but kg provided, auto-calc at ₱10/kg
+            if ($amount === null && $kg !== null) {
+                $amount = (float)$kg * 10.00;
+            }
+
+            // 4) Final validation
+            if ($amount === null || !is_numeric($amount) || $amount < 0) {
+                return response()->json([
+                    'message' => 'Validation failed',
+                    'errors'  => ['amount' => ['Amount is required or must be non-negative']],
+                ], 422);
+            }
+
+            // 5) Load request with relations
             $req = RequestModel::with(['service', 'payment'])->find($id);
             if (!$req) {
                 Log::warning('setPaymentAmount: request not found: ' . $id);
                 return response()->json(['message' => 'Request not found'], 404);
             }
 
-            // 3) Authorization: only the owner may set amount
+            // 6) Authorization: only owner/service owner
             $user = $request->user();
             $serviceOwnerId = optional($req->service)->ownerID ?? $req->ownerID;
             if ($user && isset($user->userID) && (int)$user->userID !== (int)$serviceOwnerId) {
@@ -950,36 +990,39 @@ class RequestController extends Controller
                 return response()->json(['message' => 'Forbidden'], 403);
             }
 
-            // 4) Ensure payment row exists
+            // 7) Ensure payment row exists
             $payment = Payment::where('requestID', $req->requestID)->first();
             if (!$payment) {
-                Log::info('setPaymentAmount: creating missing payment row for requestID=' . $req->requestID);
-                $existing = Payment::where('requestID', $req->requestID)->first();
-                $defaultModeId = $existing ? $existing->modeID : 1; // 1 = COD by your convention
-                $defaultStatus = $existing ? $existing->paymentStatusID : 1; // 1 = Pending
                 $payment = Payment::create([
                     'requestID'       => $req->requestID,
-                    'modeID'          => $defaultModeId,
-                    'paymentStatusID' => $defaultStatus,
+                    'modeID'          => 1,
+                    'paymentStatusID' => 1,
                     'paymentDate'     => now(),
                     'userID'          => $req->customerID,
                     'amount'          => 0,
                 ]);
             }
 
-            // 5) Update amount/date
-            $payment->amount = $amount;
+            // 8) Persist: payment.amount and optional milled_kg
+            $payment->amount = (float)$amount;
             $payment->paymentDate = now();
             $payment->save();
 
-            // 6) Optional push to customer
+            if ($kg !== null) {
+                $req->milled_kg = (float)$kg;
+                $req->dateUpdated = now();
+                $req->save();
+            }
+
+            // 9) Optional push
             try {
                 $this->pushStatusNotification($req, [
                     'title' => 'Payment Amount Set',
                     'body'  => 'Your milling fee has been set for request ID: ' . $req->requestID . '.',
                     'data'  => [
-                        'event'  => 'payment_amount_set',
-                        'amount' => (string)$payment->amount,
+                        'event'     => 'payment_amount_set',
+                        'amount'    => (string)$payment->amount,
+                        'milled_kg' => ($kg !== null) ? (string)$kg : null,
                     ],
                 ]);
             } catch (\Throwable $e) {
@@ -987,10 +1030,11 @@ class RequestController extends Controller
             }
 
             return response()->json([
-                'message' => 'Payment amount updated successfully',
+                'message' => 'Payment and milling details updated',
                 'data'    => [
                     'requestID' => $req->requestID,
                     'amount'    => $payment->amount,
+                    'milledKg'  => $req->milled_kg ?? null,
                 ],
             ], 200);
         } catch (\Illuminate\Validation\ValidationException $ve) {
