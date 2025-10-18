@@ -1,6 +1,9 @@
 package com.example.capstone2.repository
 
 import android.content.Context
+import android.util.Log
+import com.example.capstone2.MyApp
+import com.example.capstone2.R
 import com.example.capstone2.data.models.LoginRequest
 import com.example.capstone2.data.models.LoginResponse
 import com.example.capstone2.data.models.RegisterRequest
@@ -16,6 +19,8 @@ import com.example.capstone2.repository.SharedPrefManager
 
 class UserRepository(private val context: Context) {
 
+    private val TAG = "LoginRepo"
+
     private val apiService by lazy {
         ApiClient.getApiService(getTokenProvider(context))
     }
@@ -25,24 +30,57 @@ class UserRepository(private val context: Context) {
     }
 
     suspend fun loginUser(loginRequest: LoginRequest): Response<LoginResponse> {
-        val response = apiService.login(loginRequest)
-        if (response.isSuccessful) {
-            response.body()?.let { body ->
-                body.token.let { token ->
-                    SharedPrefManager.saveAuthToken(context, token)
-                }
-                // Save userID if present
-                body.user?.let { user ->
-                    try {
-                        val uid = user.userID
-                        SharedPrefManager.saveUserId(context, uid)
-                    } catch (e: Exception) {
-                        // ignore if userID missing
+        // Diagnostic: log the configured base URL
+        try {
+            val configuredBase = MyApp.instance.getString(R.string.api_base_url)
+            Log.d(TAG, "Configured API base URL: $configuredBase")
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read configured API base URL: ${e.message}")
+        }
+
+        // Perform the network call with logging around it
+        try {
+            Log.d(TAG, "Starting login request for email=${loginRequest.emailAddress}")
+            val response = apiService.login(loginRequest)
+
+            // Log raw request URL if available
+            try {
+                val rawReqUrl = response.raw().request.url
+                Log.d(TAG, "Login request URL: $rawReqUrl")
+            } catch (_: Exception) { }
+
+            if (response.isSuccessful) {
+                Log.d(TAG, "Login successful: HTTP ${response.code()}")
+                response.body()?.let { body ->
+                    body.token?.let { token ->
+                        Log.d(TAG, "Received token (length=${token.length})")
+                        SharedPrefManager.saveAuthToken(context, token)
                     }
+                    body.user?.let { user ->
+                        Log.d(TAG, "Received user id=${user.userID} role=${user.roleID}")
+                        try {
+                            SharedPrefManager.saveUserId(context, user.userID)
+                            SharedPrefManager.saveUserStatus(context, user.status)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to save user info: ${e.message}")
+                        }
+                    }
+                } ?: Log.w(TAG, "Login response body was null despite 2xx")
+            } else {
+                Log.e(TAG, "Login failed: HTTP ${response.code()}")
+                try {
+                    val err = response.errorBody()?.string()
+                    Log.e(TAG, "Login error body: $err")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to read error body: ${e.message}")
                 }
             }
+
+            return response
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception during login request: ${e.message}")
+            throw e
         }
-        return response
     }
 
     suspend fun getProfile(): Response<User> {

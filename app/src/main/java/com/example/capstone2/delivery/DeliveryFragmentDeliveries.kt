@@ -16,6 +16,7 @@ import com.example.capstone2.data.api.ApiService
 import com.example.capstone2.data.models.Request
 import com.example.capstone2.network.ApiClient
 import com.example.capstone2.repository.RequestRepository
+import com.example.capstone2.repository.SharedPrefManager
 import kotlinx.coroutines.launch
 
 class DeliveryFragmentDeliveries : Fragment(R.layout.fragment_delivery_deliveries) {
@@ -34,8 +35,7 @@ class DeliveryFragmentDeliveries : Fragment(R.layout.fragment_delivery_deliverie
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
         // Get token from SharedPreferences
-        val sharedPreferences = requireContext().getSharedPreferences("MyAppPrefs", 0)
-        val token = sharedPreferences.getString("auth_token", null)
+        val token = SharedPrefManager.getAuthToken(requireContext())
         if (token.isNullOrEmpty()) {
             Toast.makeText(requireContext(), "Missing auth token", Toast.LENGTH_SHORT).show()
             return
@@ -65,11 +65,12 @@ class DeliveryFragmentDeliveries : Fragment(R.layout.fragment_delivery_deliverie
     private fun fetchDeliveries() {
         lifecycleScope.launch {
             try {
-                // Only show Milling done (12) or Rider out (6)
+                // Show requests ready for or out on delivery: status 12 (Milling done) or 6 (Rider out)
                 val requests = requestRepository.getDeliveryBoyRequests()
                     .filter { request ->
-                        (request.serviceID == 1L || request.serviceID == 3L || request.serviceID == 5L) &&
-                                (request.statusID == 12 || request.statusID == 6)
+                        val deliveryRelatedService = request.serviceID in listOf(1L, 3L, 5L, 7L)
+                        val deliveryStatus = request.statusID == 12 || request.statusID == 6
+                        (deliveryStatus && deliveryRelatedService)
                     }
 
 
@@ -77,6 +78,7 @@ class DeliveryFragmentDeliveries : Fragment(R.layout.fragment_delivery_deliverie
                 tvNoRequests.visibility = if (requests.isEmpty()) View.VISIBLE else View.GONE
             } catch (e: Exception) {
                 Toast.makeText(requireContext(), "Error fetching deliveries: ${e.message}", Toast.LENGTH_SHORT).show()
+                tvNoRequests.visibility = View.VISIBLE
             }
         }
     }

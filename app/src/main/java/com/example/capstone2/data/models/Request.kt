@@ -26,5 +26,7 @@ data class Request(
     val feedsConversion: Boolean? = null,
     val millingType: String? = null,
     // optional contact number for customer (may not be provided by server)
-    val contactNumber: String? = null
+    val contactNumber: String? = null,
+    // NEW: optional pickup time in HH:mm
+    val pickupTime: String? = null
 ) : Parcelable

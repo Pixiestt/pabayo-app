@@ -40,7 +40,7 @@ class DeliveryTrackAdapter(
             1 -> "Subject for approval"
             2 -> "Delivery boy pickup"
             3 -> "Waiting for customer drop off"
-            4 -> "In Queue"
+            4 -> "Pending"
             5 -> "Processing"
             6 -> "Rider out for delivery"
             7 -> "Waiting for customer to claim"
@@ -65,5 +65,3 @@ class DeliveryTrackAdapter(
         notifyDataSetChanged()
     }
 }
-
-

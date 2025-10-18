@@ -25,16 +25,13 @@ class RequestViewModel(
         viewModelScope.launch {
             try {
                 val response = requestRepository.createRequest(request)
-
                 if (response.isSuccessful) {
-                    val createdRequest = response.body()
-                    _submitResult.postValue(createdRequest)
-                    
-                    // Send notification to owner about new request
-                    createdRequest?.let {
-                        val notificationService = NotificationServiceFactory.getInstance(application)
-                        notificationService.notifyOwnerNewRequest(it)
-                    }
+                    // Backend may return an envelope or empty body; treat HTTP 2xx as success
+                    _submitResult.postValue(request)
+
+                    // Notify owner about new request (best-effort)
+                    val notificationService = NotificationServiceFactory.getInstance(application)
+                    notificationService.notifyOwnerNewRequest(request)
                 } else {
                     _submitResult.postValue(null)
                 }
@@ -49,10 +46,8 @@ class RequestViewModel(
             try {
                 val response = requestRepository.updateRequest(requestId, request)
                 if (response.isSuccessful) {
-                    // Some backends return an empty body on successful update.
-                    // To ensure callers can detect success reliably, post a non-null value.
-                    val updated = response.body() ?: request
-                    _updateResult.postValue(updated)
+                    // Some backends return an empty body on successful update. Use original request.
+                    _updateResult.postValue(request)
                 } else {
                     _updateResult.postValue(null)
                 }

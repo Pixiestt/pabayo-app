@@ -17,6 +17,7 @@ import com.example.capstone2.R
 import com.example.capstone2.adapter.CustomerHistoryAdapter
 import com.example.capstone2.network.ApiClient
 import com.example.capstone2.repository.RequestRepository
+import com.example.capstone2.repository.SharedPrefManager
 import com.example.capstone2.viewmodel.CustomerHistoryViewModel
 import com.example.capstone2.viewmodel.CustomerHistoryViewModelFactory
 import java.text.SimpleDateFormat
@@ -62,9 +63,8 @@ class CustomerFragmentHistory : Fragment(R.layout.customer_fragment_history) {
         recyclerView.adapter = historyAdapter
 
         // Get token and customer ID from shared preferences
-        val sharedPreferences = requireContext().getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
-        val token = sharedPreferences.getString("auth_token", null)
-        customerID = sharedPreferences.getLong("userID", -1L)
+        val token = SharedPrefManager.getAuthToken(requireContext())
+        customerID = SharedPrefManager.getUserId(requireContext()) ?: -1L
 
         if (token.isNullOrEmpty()) {
             Toast.makeText(requireContext(), "Missing auth token", Toast.LENGTH_SHORT).show()
@@ -77,7 +77,7 @@ class CustomerFragmentHistory : Fragment(R.layout.customer_fragment_history) {
         }
 
         // Setup ViewModel
-        val authedApiService = ApiClient.getApiService { token }
+        val authedApiService = ApiClient.getApiService { token ?: "" }
         val repository = RequestRepository(authedApiService)
         val viewModelFactory = CustomerHistoryViewModelFactory(repository)
         historyViewModel = ViewModelProvider(this, viewModelFactory)[CustomerHistoryViewModel::class.java]

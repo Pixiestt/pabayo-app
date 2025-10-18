@@ -5,6 +5,7 @@ import com.example.capstone2.data.api.ApiService
 import com.example.capstone2.data.models.CreateRequest
 import com.example.capstone2.data.models.Request
 import com.example.capstone2.data.models.RequestResponse
+import com.example.capstone2.data.models.QueueResponse
 import okhttp3.ResponseBody
 import retrofit2.Response
 import com.google.gson.Gson
@@ -22,12 +23,12 @@ class RequestRepository(private val apiService: ApiService) {
         private var ownerRequestsCache: String? = null
     }
 
-    suspend fun createRequest(request: CreateRequest): Response<CreateRequest> {
+    suspend fun createRequest(request: CreateRequest): Response<ResponseBody> {
         Log.d("RequestRepository", "Creating request for customerID: ${request.customerID}")
         return apiService.createRequest(request)
     }
 
-    suspend fun updateRequest(requestId: Long, request: CreateRequest): Response<CreateRequest> {
+    suspend fun updateRequest(requestId: Long, request: CreateRequest): Response<ResponseBody> {
         Log.d("RequestRepository", "Updating request ID: $requestId for customerID: ${request.customerID}")
         return apiService.updateRequest(requestId, request)
     }
@@ -272,6 +273,21 @@ class RequestRepository(private val apiService: ApiService) {
     suspend fun markPickupDone(requestId: Long): Response<ResponseBody> {
         Log.d("RequestRepository", "Courier marking pickup done for request ID: $requestId")
         return apiService.markPickupDone(requestId)
+    }
+
+    // New: fetch all requests filtered by status ID, if supported by backend
+    suspend fun getRequestsByStatus(statusID: Int): Response<RequestResponse> {
+        return apiService.getRequestsByStatus(statusID)
+    }
+
+    // New: fetch all requests filtered by status name (e.g., "pending"), if supported by backend
+    suspend fun getRequestsByStatusName(status: String): Response<RequestResponse> {
+        return apiService.getRequestsByStatusName(status)
+    }
+
+    suspend fun getCustomerQueue(customerID: Long): Response<QueueResponse> {
+        Log.d("RequestRepository", "Getting queue for customerID: $customerID")
+        return apiService.getCustomerQueue(customerID)
     }
 
 }

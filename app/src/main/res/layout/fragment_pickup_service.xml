@@ -180,6 +180,29 @@
                     android:clickable="true"
                     android:visibility="gone" />
 
+                <!-- Pickup Time Input -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_pickup_time"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/etPickupTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:background="@drawable/edit_text_background"
+                    android:hint="@string/hint_pickup_time"
+                    android:inputType="time"
+                    android:padding="16dp"
+                    android:textSize="16sp"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:visibility="gone" />
+
             </LinearLayout>
 
         </LinearLayout>

@@ -17,11 +17,11 @@ import com.example.capstone2.R
 import com.example.capstone2.messages.MessagesFragment
 import com.example.capstone2.util.NotificationUtils
 import com.example.capstone2.util.PermissionUtils
+import com.example.capstone2.repository.SharedPrefManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationView
 import android.view.View
 import android.widget.TextView
-import android.view.MenuItem
 import androidx.core.content.edit
 
 class CustomerMainActivity : AppCompatActivity() {
@@ -101,21 +101,19 @@ class CustomerMainActivity : AppCompatActivity() {
             val actionView = messagesItem.actionView
             messagesBadgeView = actionView?.findViewById(R.id.tvMenuBadge)
             // initialize from persisted preference
-            val saved = getSharedPreferences("MyAppPrefs", MODE_PRIVATE).getInt("unread_messages_count", 0)
+            val saved = SharedPrefManager.getUnreadMessagesCount(this)
             setMessagesUnreadCount(saved)
         } catch (_: Exception) {}
         navigationView.setNavigationItemSelectedListener { menuItem ->
+            // If the drawer destination is also present in the bottom navigation,
+            // drive navigation by selecting the bottom-nav item so the highlight stays in sync.
             when (menuItem.itemId) {
-                R.id.home -> setCurrentFragment(fragmenthome)
-                R.id.request -> setCurrentFragment(fragmentrequest)
-                R.id.track -> setCurrentFragment(fragmenttrack)
-                R.id.history -> setCurrentFragment(fragmenthistory)
-                R.id.messages -> {
-                    setCurrentFragment(fragmentmessages)
-                    // clear unread badge when user opens Messages
-                    setMessagesUnreadCount(0)
+                R.id.home, R.id.request, R.id.track, R.id.messages, R.id.profile -> {
+                    bottomNavigationView.selectedItemId = menuItem.itemId
                 }
-                R.id.profile -> setCurrentFragment(fragmentprofile)
+                R.id.history -> {
+                    setCurrentFragment(fragmenthistory)
+                }
                 R.id.logout -> {
                     // show confirmation dialog instead of immediate logout
                     showLogoutConfirmation()
@@ -163,7 +161,7 @@ class CustomerMainActivity : AppCompatActivity() {
     // Public API to update unread messages count (persists and updates badge)
     fun setMessagesUnreadCount(count: Int) {
         try {
-            getSharedPreferences("MyAppPrefs", MODE_PRIVATE).edit { putInt("unread_messages_count", count) }
+            SharedPrefManager.saveUnreadMessagesCount(this, count)
             // Owner activity may also read this value; update local drawer badge view
             runOnUiThread {
                 try {
@@ -180,7 +178,7 @@ class CustomerMainActivity : AppCompatActivity() {
         } catch (_: Exception) {}
     }
 
-    fun getMessagesUnreadCount(): Int = try { getSharedPreferences("MyAppPrefs", MODE_PRIVATE).getInt("unread_messages_count", 0) } catch (_: Exception) { 0 }
+    fun getMessagesUnreadCount(): Int = try { SharedPrefManager.getUnreadMessagesCount(this) } catch (_: Exception) { 0 }
 
     // Show a confirmation dialog before logging out
     private fun showLogoutConfirmation() {
@@ -196,12 +194,9 @@ class CustomerMainActivity : AppCompatActivity() {
 
     // Clear stored auth and navigate to LoginActivity
     private fun performLogout() {
-        val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
-        // Use KTX edit extension which applies changes in the lambda
-        sharedPref.edit {
-            remove("auth_token")
-            remove("userID")
-        }
+        // Centralized clearing to remove token and user id from both pref locations
+        SharedPrefManager.clearAuthToken(this)
+        SharedPrefManager.clearUserId(this)
 
         val intent = Intent(this, com.example.capstone2.authentication.LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

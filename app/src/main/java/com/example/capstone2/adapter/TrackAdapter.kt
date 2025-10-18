@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.capstone2.R
 import com.example.capstone2.user.ViewUserProfileActivity
 import com.example.capstone2.data.models.Request
+import com.example.capstone2.repository.SharedPrefManager
 
 class TrackAdapter(
     private var requests: List<Request>,
@@ -22,6 +23,7 @@ class TrackAdapter(
 ) : RecyclerView.Adapter<TrackAdapter.TrackViewHolder>() {
 
     inner class TrackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val tvRequestId: TextView = itemView.findViewById(R.id.tvRequestId)
         val customerName: TextView = itemView.findViewById(R.id.tvCustomerName)
         val tvSackQty: TextView = itemView.findViewById(R.id.tvSackQty)
         val tvServices: TextView = itemView.findViewById(R.id.tvServices)
@@ -29,6 +31,7 @@ class TrackAdapter(
         val tvPickupLocation: TextView = itemView.findViewById(R.id.tvPickupLocation)
         val tvDeliveryLocation: TextView = itemView.findViewById(R.id.tvDeliveryLocation)
         val tvCurrentStatus: TextView = itemView.findViewById(R.id.tvCurrentStatus)
+        val tvPickupPreparingMessage: TextView? = itemView.findViewById(R.id.tvPickupPreparingMessage)
 
         val rgStatusOptions: RadioGroup = itemView.findViewById(R.id.rgStatusOptions)
         val rbDpickup: RadioButton = itemView.findViewById(R.id.rbDpickup)
@@ -42,6 +45,7 @@ class TrackAdapter(
 
         val btnSubmit = itemView.findViewById<Button>(R.id.btnSubmit)
         val btnMore = itemView.findViewById<ImageButton>(R.id.btnMore)
+        val btnRowMessage: Button? = itemView.findViewById(R.id.btnRowMessage)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TrackViewHolder {
@@ -52,6 +56,9 @@ class TrackAdapter(
     override fun onBindViewHolder(holder: TrackViewHolder, position: Int) {
         val req = requests[position]
         val ctx = holder.itemView.context
+
+        // Show Request ID at upper-left
+        holder.tvRequestId.text = ctx.getString(R.string.request_id_format, req.requestID)
 
         holder.customerName.text = req.customerName
         holder.tvSackQty.text = ctx.getString(R.string.sacks_format, req.sackQuantity)
@@ -76,6 +83,7 @@ class TrackAdapter(
             4 -> "#2196F3"
             5 -> "#9C27B0"
             6, 7 -> "#FF5722"
+            12 -> "#2E7D32"
             else -> "#3F51B5"
         }
         try {
@@ -103,48 +111,45 @@ class TrackAdapter(
         holder.btnSubmit.visibility = View.GONE
         holder.btnSubmit.isEnabled = false
         holder.btnSubmit.setOnClickListener(null)
+        holder.btnRowMessage?.visibility = View.GONE
+        holder.btnRowMessage?.setOnClickListener(null)
 
-        val serviceId = try { req.serviceID.toInt() } catch (_: Exception) { 0 }
         val currentStatus = currentStatusInt
 
-        val hasPickup = serviceId in listOf(1, 2, 5)
-        val hasDelivery = serviceId in listOf(1, 3, 5)
+        val includesPickup = req.serviceID in listOf(1L, 2L, 5L, 6L)
+        val includesDelivery = req.serviceID in listOf(1L, 3L, 5L, 7L)
+        // 12 (Milling done) should not be terminal for non-delivery services because we need to move to 7 (Waiting for customer to claim)
+        val terminalStatuses = setOf(8, 9, 13)
 
-        // Define the canonical progression for different service types
-        val fullStatusIDs = when (req.serviceID) {
-            1L, 5L -> listOf(2, 4, 5, 6)
-            2L, 6L -> listOf(2, 4, 5, 7)
-            3L, 7L -> listOf(3, 4, 5, 6)
-            4L, 8L -> listOf(3, 4, 5, 7)
-            else -> listOf()
-        }
-
-        // Compute nextStatus using a combination of the canonical list and a couple of special rules
-        var nextStatus: Int? = null
-        if (currentStatus == 10) {
-            // owner can set 'Waiting for customer drop off' from Request Accepted
-            nextStatus = 3
-        } else if (currentStatus == 5) {
-            // from Processing -> Milling Done
-            nextStatus = 12
-        } else if (fullStatusIDs.isNotEmpty()) {
-            val currentIndex = fullStatusIDs.indexOf(currentStatus)
-            nextStatus = when {
-                currentIndex >= 0 && currentIndex < fullStatusIDs.size - 1 -> fullStatusIDs[currentIndex + 1]
-                currentIndex == -1 -> fullStatusIDs[0]
+        // Compute next status strictly following owner-side rules
+        val nextStatus: Int? = when {
+            currentStatus in terminalStatuses -> null
+            // New rule: If there's no delivery and we're at Milling done, next is Waiting for customer to claim (7)
+            !includesDelivery && currentStatus == 12 -> 7
+            includesPickup -> when (currentStatus) {
+                10 -> null
+                4 -> 5
+                5 -> 12
+                else -> null
+            }
+            else -> when (currentStatus) {
+                10 -> 3
+                3 -> 4
+                4 -> 5
+                5 -> 12
                 else -> null
             }
         }
 
+        // Show or hide pickup preparing message
+        holder.tvPickupPreparingMessage?.visibility = if (includesPickup && currentStatus == 10 && nextStatus == null) View.VISIBLE else View.GONE
+
         val statusToRadioMap = mapOf(
-            2 to holder.rbDpickup,
             3 to holder.rbCDropoff,
             4 to holder.rbPending,
             5 to holder.rbProcessing,
-            6 to holder.rbOutForDelivery,
             7 to holder.rbCPickup,
-            12 to holder.rbMillingDone,
-            13 to holder.rbDelivered
+            12 to holder.rbMillingDone
         )
 
         if (nextStatus != null) {
@@ -174,26 +179,49 @@ class TrackAdapter(
             }
 
             val radioIdToStatus = mapOf(
-                holder.rbDpickup.id to 2,
                 holder.rbCDropoff.id to 3,
                 holder.rbPending.id to 4,
                 holder.rbProcessing.id to 5,
-                holder.rbOutForDelivery.id to 6,
                 holder.rbCPickup.id to 7,
-                holder.rbMillingDone.id to 12,
-                holder.rbDelivered.id to 13
+                holder.rbMillingDone.id to 12
             )
 
             holder.btnSubmit.setOnClickListener {
                 val checkedId = holder.rgStatusOptions.checkedRadioButtonId
-                val selectedStatus = radioIdToStatus[checkedId]
+                val selectedStatus = radioIdToStatus[checkedId] ?: nextStatus
                 if (selectedStatus != null) {
                     onButtonClick(req, selectedStatus)
-                } else if (nextStatus != null) {
-                    // fallback: if user didn't explicitly pick a radio but we computed a next status
-                    onButtonClick(req, nextStatus)
                 } else {
-                    Toast.makeText(holder.itemView.context, "Please select a status option", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(holder.itemView.context, R.string.submit, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        // Row-level Message button: show only when Waiting for customer to claim (status 7)
+        if (currentStatus == 7) {
+            holder.btnRowMessage?.visibility = View.VISIBLE
+            holder.btnRowMessage?.setOnClickListener {
+                val context = holder.itemView.context
+                val myId = SharedPrefManager.getUserId(context)
+                val otherId = when {
+                    myId == null -> req.customerID
+                    myId == req.ownerID -> req.customerID
+                    else -> req.customerID
+                }
+                val otherName = req.customerName
+                val activity = context as? androidx.fragment.app.FragmentActivity
+                if (activity != null) {
+                    try {
+                        val chatFrag = com.example.capstone2.customer.ChatFragment.newInstance(otherId, null, otherName)
+                        activity.supportFragmentManager.beginTransaction()
+                            .replace(R.id.flFragment, chatFrag)
+                            .addToBackStack(null)
+                            .commit()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Unable to open chat: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(context, "Cannot open chat from this context", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -204,13 +232,13 @@ class TrackAdapter(
 
             if (!req.pickupLocation.isNullOrEmpty()) {
                 detailsBuilder.append("Pickup location: ${req.pickupLocation}\n")
-            } else if (hasPickup) {
+            } else if (includesPickup) {
                 detailsBuilder.append("Pickup location: Not set\n")
             }
 
             if (!req.deliveryLocation.isNullOrEmpty()) {
                 detailsBuilder.append("Delivery location: ${req.deliveryLocation}\n")
-            } else if (hasDelivery) {
+            } else if (includesDelivery) {
                 detailsBuilder.append("Delivery location: Not set\n")
             }
 
@@ -218,7 +246,7 @@ class TrackAdapter(
 
             // Create a custom dialog from layout so we can show contact and action buttons
             val dialog = android.app.Dialog(ctx)
-            val dlgView = LayoutInflater.from(ctx).inflate(R.layout.dialog_request_details, null)
+            val dlgView = LayoutInflater.from(ctx).inflate(R.layout.dialog_request_details, null, false)
             dialog.setContentView(dlgView)
             dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
@@ -227,43 +255,38 @@ class TrackAdapter(
             val tvDetailSackQty: TextView = dlgView.findViewById(R.id.tvDetailSackQty)
             val tvDetailServices: TextView = dlgView.findViewById(R.id.tvDetailServices)
             val tvDetailSchedule: TextView = dlgView.findViewById(R.id.tvDetailSchedule)
-            val tvDetailPickupLocation: TextView = dlgView.findViewById(R.id.tvDetailPickupLocation)
-            val tvDetailDeliveryLocation: TextView = dlgView.findViewById(R.id.tvDetailDeliveryLocation)
             val tvDetailComment: TextView = dlgView.findViewById(R.id.tvDetailComment)
             val tvDetailSubmittedAt: TextView = dlgView.findViewById(R.id.tvDetailSubmittedAt)
             val tvDetailContact: TextView = dlgView.findViewById(R.id.tvDetailContact)
-            val btnCall: Button = dlgView.findViewById(R.id.btnCall)
-            val btnCopy: Button = dlgView.findViewById(R.id.btnCopy)
             val btnMsg: Button = dlgView.findViewById(R.id.btnMessage)
             val btnViewProfile: Button = dlgView.findViewById(R.id.btnViewProfile)
             val btnClose: Button = dlgView.findViewById(R.id.btnClose)
-            // Hide progress-related UI for owner dialog (we don't show progress in this 'More' view)
             val tvDetailProgressLabel: TextView? = dlgView.findViewById(R.id.tvDetailProgressLabel)
             val progressBarRequest: ProgressBar? = dlgView.findViewById(R.id.progressBarRequest)
             tvDetailProgressLabel?.visibility = View.GONE
             progressBarRequest?.visibility = View.GONE
 
             // Populate basic fields
-            tvDetailCustomerName.text = ctx.getString(com.example.capstone2.R.string.customer_format, req.customerName)
-            tvDetailSackQty.text = ctx.getString(com.example.capstone2.R.string.sacks_format, req.sackQuantity)
-            tvDetailServices.text = ctx.getString(com.example.capstone2.R.string.services_format, req.serviceName)
-            tvDetailSchedule.text = ctx.getString(com.example.capstone2.R.string.schedule_format_owner, req.schedule ?: ctx.getString(com.example.capstone2.R.string.not_set))
-            tvDetailComment.text = ctx.getString(com.example.capstone2.R.string.comment_format, req.comment ?: "None")
-            tvDetailSubmittedAt.text = ctx.getString(com.example.capstone2.R.string.submitted_at_format, req.submittedAt ?: "Unknown")
+            tvDetailCustomerName.text = ctx.getString(R.string.customer_format, req.customerName)
+            tvDetailSackQty.text = ctx.getString(R.string.sacks_format, req.sackQuantity)
+            tvDetailServices.text = ctx.getString(R.string.services_format, req.serviceName)
+            tvDetailSchedule.text = ctx.getString(R.string.schedule_format_owner, req.schedule ?: ctx.getString(R.string.not_set))
+            tvDetailComment.text = ctx.getString(R.string.comment_format, req.comment ?: "None")
+            tvDetailSubmittedAt.text = ctx.getString(R.string.submitted_at_format, req.submittedAt ?: "Unknown")
 
-            fun showContactRow(contact: String?) {
-                if (contact.isNullOrBlank()) {
-                    tvDetailContact.visibility = View.GONE
-                    btnCall.visibility = View.GONE
-                    btnCopy.visibility = View.GONE
-                } else {
-                    tvDetailContact.visibility = View.VISIBLE
-                    tvDetailContact.text = "Contact number: $contact"
-                    // Only enable call/copy actions if the contact looks like a phone number
-                    val digits = contact.filter { it.isDigit() }
-                    val actionable = digits.length >= 6
-                    btnCall.visibility = if (actionable) View.VISIBLE else View.GONE
-                    btnCopy.visibility = if (actionable) View.VISIBLE else View.GONE
+            // Initially show either the static contact if present or a loading state and fetch
+            if (!req.contactNumber.isNullOrBlank()) {
+                tvDetailContact.visibility = View.VISIBLE
+                tvDetailContact.text = ctx.getString(R.string.contact_number_format, req.contactNumber)
+            } else {
+                tvDetailContact.visibility = View.VISIBLE
+                tvDetailContact.text = ctx.getString(R.string.contact_number_format, ctx.getString(R.string.contact_number_loading))
+                fetchContact(req.customerID) { finalContact ->
+                    (ctx as? android.app.Activity)?.runOnUiThread {
+                        tvDetailContact.text = ctx.getString(R.string.contact_number_format, finalContact)
+                    } ?: run {
+                        tvDetailContact.text = ctx.getString(R.string.contact_number_format, finalContact)
+                    }
                 }
             }
 
@@ -277,48 +300,41 @@ class TrackAdapter(
                 } catch (_: Exception) { /* ignore */ }
             }
 
-            // Wire Call and Copy actions
-            btnCall.setOnClickListener {
-                val phone = req.contactNumber
-                if (!phone.isNullOrBlank()) {
-                    try {
-                        val dial = Intent(Intent.ACTION_DIAL)
-                        dial.data = android.net.Uri.parse("tel:$phone")
-                        ctx.startActivity(dial)
-                    } catch (_: Exception) { Toast.makeText(ctx, "Cannot start dialer", Toast.LENGTH_SHORT).show() }
-                }
-            }
-
-            btnCopy.setOnClickListener {
-                val phone = req.contactNumber
-                if (!phone.isNullOrBlank()) {
-                    try {
-                        val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        val clip = android.content.ClipData.newPlainText("contact", phone)
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(ctx, "Contact copied", Toast.LENGTH_SHORT).show()
-                    } catch (_: Exception) { Toast.makeText(ctx, "Cannot copy", Toast.LENGTH_SHORT).show() }
-                }
-            }
-
             // Close button
             btnClose.setOnClickListener { dialog.dismiss() }
 
-            // Initially show either the static contact if present or a loading state and fetch
-            if (!req.contactNumber.isNullOrBlank()) {
-                showContactRow(req.contactNumber)
-            } else {
-                // show loading until fetchContact completes
-                tvDetailContact.visibility = View.VISIBLE
-                tvDetailContact.text = "Contact number: Loading..."
-                btnCall.visibility = View.GONE
-                btnCopy.visibility = View.GONE
-                fetchContact(req.customerID) { finalContact ->
-                    // update UI on main thread
-                    (ctx as? android.app.Activity)?.runOnUiThread {
-                        showContactRow(finalContact)
-                    } ?: showContactRow(finalContact)
+            // Show Message button in dialog only when Waiting for customer to claim (status 7)
+            if (currentStatus == 7) {
+                btnMsg.visibility = View.VISIBLE
+                btnMsg.setOnClickListener {
+                    val context = dlgView.context
+                    val myId = SharedPrefManager.getUserId(context)
+                    val otherId = when {
+                        myId == null -> req.customerID
+                        myId == req.ownerID -> req.customerID
+                        else -> req.customerID
+                    }
+                    val otherName = req.customerName
+                    val activity = context as? androidx.fragment.app.FragmentActivity
+                    if (activity != null) {
+                        try {
+                            val chatFrag = com.example.capstone2.customer.ChatFragment.newInstance(otherId, null, otherName)
+                            dialog.dismiss()
+                            activity.supportFragmentManager.beginTransaction()
+                                .replace(R.id.flFragment, chatFrag)
+                                .addToBackStack(null)
+                                .commit()
+                        } catch (e: Exception) {
+                            dialog.dismiss()
+                            Toast.makeText(context, "Unable to open chat: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        dialog.dismiss()
+                        Toast.makeText(context, "Cannot open chat from this context", Toast.LENGTH_SHORT).show()
+                    }
                 }
+            } else {
+                btnMsg.visibility = View.GONE
             }
 
             dialog.show()
@@ -340,7 +356,7 @@ class TrackAdapter(
             4 -> "Pending"
             5 -> "Processing"
             6 -> "Rider out for delivery"
-            7 -> "Waiting for customer pickup"
+            7 -> "Waiting for customer to claim"
             8 -> "Completed"
             9 -> "Rejected"
             10 -> "Request Accepted"

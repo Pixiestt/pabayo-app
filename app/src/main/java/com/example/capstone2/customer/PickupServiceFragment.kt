@@ -13,6 +13,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.icu.util.Calendar
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -29,6 +30,7 @@ class PickupServiceFragment : Fragment() {
     private lateinit var pickupDetailsContainer: View
     private lateinit var etPickupLocation: EditText
     private lateinit var etPickupDate: EditText
+    private lateinit var etPickupTime: EditText
     private lateinit var btnNext: Button
     private lateinit var tvStepProgress: TextView
     private lateinit var cbUseSignupAddress: CheckBox
@@ -38,6 +40,7 @@ class PickupServiceFragment : Fragment() {
 
     private val calendar = Calendar.getInstance()
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.UK)
+    private val timeFormat24 = SimpleDateFormat("HH:mm", Locale.UK)
     private val TAG = "PickupServiceFragment"
 
     override fun onCreateView(
@@ -56,6 +59,7 @@ class PickupServiceFragment : Fragment() {
         pickupDetailsContainer = view.findViewById(R.id.pickupDetailsContainer)
         etPickupLocation = view.findViewById(R.id.etPickupLocation)
         etPickupDate = view.findViewById(R.id.etPickupDate)
+        etPickupTime = view.findViewById(R.id.etPickupTime)
         btnNext = view.findViewById(R.id.btnNext)
         tvStepProgress = view.findViewById(R.id.tvStepProgress)
         cbUseSignupAddress = view.findViewById(R.id.cbUseSignupAddress)
@@ -100,20 +104,35 @@ class PickupServiceFragment : Fragment() {
             }
         }
 
-        // If wizard has stored pickup location/date, show container and set values
+        // If wizard has stored pickup location/date/time, show container and set values
         var hasPrefill = false
         wizard.pickupLocation?.let { loc ->
             etPickupLocation.setText(loc)
             hasPrefill = true
         }
         wizard.pickupDate?.let { pd ->
-            etPickupDate.setText(pd)
+            // Only prefill if the stored date is today or in the future
+            val parsed = try { dateFormat.parse(pd) } catch (_: Exception) { null }
+            val isPast = parsed?.time?.let { it < startOfTodayMillis() } ?: true
+            if (!isPast) {
+                etPickupDate.setText(pd)
+                hasPrefill = true
+            } else {
+                // Clear stale past date from wizard and notify user
+                wizard.pickupDate = null
+                etPickupDate.setText("")
+                Toast.makeText(requireContext(), "Previous pickup date was in the past. Please choose a new date.", Toast.LENGTH_SHORT).show()
+            }
+        }
+        wizard.pickupTime?.let { pt ->
+            etPickupTime.setText(pt)
             hasPrefill = true
         }
         if (hasPrefill) {
             pickupDetailsContainer.visibility = View.VISIBLE
-            // ensure date field visible (XML had it gone)
+            // ensure date/time fields visible (XML had them gone)
             etPickupDate.visibility = View.VISIBLE
+            etPickupTime.visibility = View.VISIBLE
         }
 
         // Initially hide or show the container depending on radio selection
@@ -121,14 +140,17 @@ class PickupServiceFragment : Fragment() {
             R.id.rbDropOffAtFacility -> {
                 pickupDetailsContainer.visibility = View.GONE
                 etPickupDate.visibility = View.GONE
+                etPickupTime.visibility = View.GONE
             }
             R.id.rbPickupFromLocation -> {
                 pickupDetailsContainer.visibility = View.VISIBLE
                 etPickupDate.visibility = View.VISIBLE
+                etPickupTime.visibility = View.VISIBLE
             }
             else -> {
                 pickupDetailsContainer.visibility = View.GONE
                 etPickupDate.visibility = View.GONE
+                etPickupTime.visibility = View.GONE
             }
         }
 
@@ -151,9 +173,9 @@ class PickupServiceFragment : Fragment() {
             } else {
                 // Allow user to edit a custom address
                 // If wizard was using the saved home address, clear it so user can provide a custom one
-                val wizard = activity.getWizardData()
-                if (wizard.pickupLocation == savedHomeAddress) {
-                    wizard.pickupLocation = null
+                val wizardData = activity.getWizardData()
+                if (wizardData.pickupLocation == savedHomeAddress) {
+                    wizardData.pickupLocation = null
                 }
                 etPickupLocation.isEnabled = true
                 etPickupLocation.isFocusableInTouchMode = true
@@ -170,6 +192,7 @@ class PickupServiceFragment : Fragment() {
                     activity.getWizardData().pickupService = PickupService.PICKUP_FROM_LOCATION
                     pickupDetailsContainer.visibility = View.VISIBLE
                     etPickupDate.visibility = View.VISIBLE
+                    etPickupTime.visibility = View.VISIBLE
                     validateForm()
                 }
                 R.id.rbDropOffAtFacility -> {
@@ -179,9 +202,16 @@ class PickupServiceFragment : Fragment() {
                     pickupDetailsContainer.visibility = View.GONE
                     etPickupLocation.text.clear()
                     etPickupDate.text.clear()
+                    etPickupTime.text.clear()
                     etPickupDate.visibility = View.GONE
+                    etPickupTime.visibility = View.GONE
                     // reset checkbox when hiding
                     cbUseSignupAddress.isChecked = false
+                    // also clear saved wizard data when hiding
+                    val wiz = activity.getWizardData()
+                    wiz.pickupLocation = null
+                    wiz.pickupDate = null
+                    wiz.pickupTime = null
                     validateForm()
                 }
                 else -> {
@@ -191,9 +221,10 @@ class PickupServiceFragment : Fragment() {
             }
         }
 
-        // Re-validate when user types location or date
+        // Re-validate when user types location or date/time
         etPickupLocation.addTextChangedListener { validateForm() }
         etPickupDate.addTextChangedListener { validateForm() }
+        etPickupTime.addTextChangedListener { /* time optional, not gating next */ }
 
         // Ensure initial state matches any pre-selected radio button in XML
         validateForm()
@@ -208,19 +239,36 @@ class PickupServiceFragment : Fragment() {
         }
         
         etPickupDate.setOnClickListener {
-            DatePickerDialog(
+            val dialog = DatePickerDialog(
                 requireContext(),
                 datePickerListener,
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH)
-            ).show()
+            )
+            // Disallow selecting past dates
+            dialog.datePicker.minDate = startOfTodayMillis()
+            dialog.show()
         }
-        
+
+        // Set up time picker (optional)
+        etPickupTime.setOnClickListener {
+            val hour = calendar.get(Calendar.HOUR_OF_DAY)
+            val minute = calendar.get(Calendar.MINUTE)
+            TimePickerDialog(requireContext(), { _, selHour, selMinute ->
+                // Store in 24h HH:mm format to match backend normalization
+                val cal = (calendar.clone() as Calendar)
+                cal.set(Calendar.HOUR_OF_DAY, selHour)
+                cal.set(Calendar.MINUTE, selMinute)
+                etPickupTime.setText(timeFormat24.format(cal.time))
+            }, hour, minute, true).show()
+        }
+
         btnNext.setOnClickListener {
             val location = etPickupLocation.text.toString().trim()
             val pickupDate = etPickupDate.text.toString().trim()
-            
+            val pickupTime = etPickupTime.text.toString().trim().ifEmpty { null }
+
             if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromLocation && location.isEmpty()) {
                 etPickupLocation.error = "Please enter your location"
                 return@setOnClickListener
@@ -231,6 +279,17 @@ class PickupServiceFragment : Fragment() {
                 return@setOnClickListener
             }
             
+            // Extra guard: block past dates if somehow present
+            if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromLocation && pickupDate.isNotEmpty()) {
+                val parsed = try { dateFormat.parse(pickupDate) } catch (_: Exception) { null }
+                val isPast = parsed?.time?.let { it < startOfTodayMillis() } ?: true
+                if (isPast) {
+                    etPickupDate.error = "Pickup date can’t be in the past"
+                    Toast.makeText(requireContext(), "Please choose today or a future date.", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+            }
+
             if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromLocation) {
                 activity.getWizardData().pickupLocation = location
             }
@@ -241,13 +300,15 @@ class PickupServiceFragment : Fragment() {
             } else {
                 activity.getWizardData().pickupDate = null
             }
+            // Save pickup time (optional)
+            activity.getWizardData().pickupTime = pickupTime
 
             activity.goToNextStep()
         }
     }
     
     private fun validateForm() {
-        // If user chose pickup-from-location, require both location and date
+        // If user chose pickup-from-location, require both location and date; time is optional
         if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromLocation) {
             val enabled = etPickupLocation.text.toString().trim().isNotEmpty() &&
                     etPickupDate.text.toString().trim().isNotEmpty()
@@ -267,5 +328,14 @@ class PickupServiceFragment : Fragment() {
         // visually indicate disabled state
         btnNext.alpha = if (enabled) 1.0f else 0.5f
         Log.d(TAG, "Next button enabled: $enabled")
+    }
+
+    private fun startOfTodayMillis(): Long {
+        val c = Calendar.getInstance()
+        c.set(Calendar.HOUR_OF_DAY, 0)
+        c.set(Calendar.MINUTE, 0)
+        c.set(Calendar.SECOND, 0)
+        c.set(Calendar.MILLISECOND, 0)
+        return c.timeInMillis
     }
 }

@@ -104,14 +104,14 @@
     <string name="server_returned_raw">Server returned raw: %1$s</string>
 
     <!-- Labels used in owner track item layout -->
-    <string name="rb_delivery_boy_pickup">Delivery Boy Pickup</string>
-    <string name="rb_waiting_customer_dropoff">Waiting for Customer Drop Off</string>
+    <string name="rb_delivery_boy_pickup">Rider going for Pickup</string>
+    <string name="rb_waiting_customer_dropoff">Waiting for Customer to drop the Palay</string>
     <string name="rb_pending">Pending</string>
     <string name="rb_processing">Processing</string>
     <string name="rb_out_for_delivery">Out for Delivery</string>
     <string name="rb_milling_done">Milling Done</string>
     <string name="rb_delivered">Delivered</string>
-    <string name="rb_waiting_customer_pickup">Waiting for Customer Pickup</string>
+    <string name="rb_waiting_customer_pickup">Waiting for Customer to claim</string>
     <string name="submit">Submit</string>
 
     <!-- Add title string used in owner fragment -->
@@ -178,6 +178,7 @@
     <string name="dropoff_at_facility">I will drop off the palay at your facility</string>
     <string name="enter_your_location">Enter your location</string>
     <string name="contact_number_loading">Loading…</string>
+    <string name="contact_number_format">Contact number: %1$s</string>
     <string name="action_call">Call</string>
     <string name="action_message">Message</string>
     <string name="action_view_profile">View profile</string>
@@ -233,4 +234,45 @@
     <string name="sign_in">Sign in</string>
     <string name="content_desc_id_photo">Identification photo</string>
     <string name="content_desc_back_button">Back</string>
+
+    <!-- Added runtime-configurable API base URL. Change this to your server's address. For emulator use 10.0.2.2 -->
+    <!-- For debugging via adb reverse: device localhost will be forwarded to host's port 8000 -->
+    <string name="api_base_url">http://192.168.1.15:8000/</string>
+
+    <string name="pickup_preparing_message">Driver is preparing for pickup. You\'ll be able to update status after pickup is recorded.</string>
+
+    <string name="service_label">Service:</string>
+
+    <!-- New strings for delivery and pickup status/buttons -->
+    <string name="status_pickup_ongoing">Pickup ongoing</string>
+    <string name="status_pickup_done">Pickup done</string>
+    <string name="status_ongoing_delivery">Ongoing delivery</string>
+    <string name="status_delivery_done">Delivery done</string>
+    <string name="status_milling_ready_delivery">Milling done – ready for delivery</string>
+    <string name="action_initiate_delivery">Initiate Delivery</string>
+    <string name="action_delivery_done">Delivery Done</string>
+
+    <!-- Queue dialog messages -->
+    <string name="no_processing_requests">No processing requests</string>
+    <string name="no_pending_requests">No pending requests</string>
+    <string name="request_number">Request #%1$s</string>
+    <string name="debug_other_statuses_present">(debug) Other statuses present: %1$s</string>
+
+    <!-- Indicate when only the current customer’s requests are being shown due to global access not being available -->
+    <string name="queue_scope_customer_only">Showing your requests</string>
+
+    <string name="total_processing_count">Total: %1$d</string>
+    <string name="total_pending_count">Total: %1$d</string>
+
+    <string name="label_pickup_time">Pickup Time (optional)</string>
+    <string name="hint_pickup_time">Select pickup time</string>
+
+    <string name="beams_instance_id">REPLACE_WITH_YOUR_BEAMS_INSTANCE_ID</string>
+
+    <!-- New string for status-updated timestamp in customer details dialog -->
+    <string name="status_updated_at">Status updated: %1$s</string>
+
+    <!-- New strings for status change timeline -->
+    <string name="status_timeline_header">Status timeline</string>
+    <string name="status_timeline_entry">%1$s — %2$s</string>
 </resources>

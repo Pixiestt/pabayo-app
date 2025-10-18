@@ -11,7 +11,6 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
@@ -20,6 +19,7 @@ import com.example.capstone2.customer.CustomerMainActivity
 import com.example.capstone2.data.models.LoginRequest
 import com.example.capstone2.delivery.DeliveryMainActivity
 import com.example.capstone2.owner.OwnerMainActivity
+import com.example.capstone2.repository.SharedPrefManager
 import com.example.capstone2.viewmodel.UserViewModel
 import com.example.capstone2.viewmodel.UserViewModelFactory
 
@@ -27,20 +27,16 @@ import com.example.capstone2.viewmodel.UserViewModelFactory
 import com.pusher.pushnotifications.PushNotifications
 
 
+
 import com.google.firebase.FirebaseApp
+import com.example.capstone2.util.NotificationUtils
 
 
 class LoginActivity : AppCompatActivity() {
 
     companion object {
-        // TODO: replace with your actual Beams instance id
-        private const val BEAMS_INSTANCE_ID = "8c4f8907-19a5-4d60-8de2-39344b7156da"
-    }
-
-    private fun getAuthToken(): String? {
-        val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
-        // Use a default empty string if not found, or null
-        return sharedPref.getString("auth_token", null)
+        // Keep as fallback in case the string resource is not configured
+        private const val FALLBACK_BEAMS_INSTANCE_ID = "8c4f8907-19a5-4d60-8de2-39344b7156da"
     }
 
     private lateinit var userViewModel: UserViewModel
@@ -55,9 +51,18 @@ class LoginActivity : AppCompatActivity() {
             insets
         }
 
-        // Ensure Firebase default app is initialized before starting PushNotifications.
-        // This prevents IllegalStateException: Default FirebaseApp is not initialized
-        FirebaseApp.initializeApp(this)
+        // Try to initialize Firebase and notification channel defensively (some devices/configs may fail)
+        try {
+            FirebaseApp.initializeApp(this)
+        } catch (e: Exception) {
+            Log.w("LoginActivity", "FirebaseApp.initializeApp threw: ${e.message}")
+        }
+
+        try {
+            NotificationUtils.createNotificationChannel(this)
+        } catch (e: Exception) {
+            Log.w("LoginActivity", "createNotificationChannel threw: ${e.message}")
+        }
 
         // Note: We start PushNotifications right after a successful login (so we have an auth token).
         // If you prefer, move PushNotifications.start(...) into your Application subclass so it runs once.
@@ -112,83 +117,94 @@ class LoginActivity : AppCompatActivity() {
             val password = passwordEditText.text.toString().trim()
 
             if (email.isNotEmpty() && password.isNotEmpty()) {
-                val loginRequest = LoginRequest(email, password)
+                val loginRequest = LoginRequest(emailAddress = email, email = email, password = password)
 
                 userViewModel.loginUser(loginRequest).observe(this) { response ->
-                    Log.d("LoginResponse", "Received: $response")
-                    if (response != null && response.token.isNotEmpty()) {
+                    try {
+                        Log.d("LoginResponse", "Received: $response")
+                        if (response == null) {
+                            Toast.makeText(this, "Login failed: invalid credentials or token.", Toast.LENGTH_SHORT).show()
+                            return@observe
+                        }
+
                         val user = response.user
                         val token = response.token
 
-                        // Save token and userID
-                        saveAuthToken(token)
-                        saveUserID(user.userID)
-                        // Save user account status (if provided). Default to "approved" to avoid accidental blocking when API doesn't supply status.
-                        saveUserStatus(user.status)
+                        if (token.isNullOrEmpty()) {
+                            Toast.makeText(this, "Login failed: empty token.", Toast.LENGTH_SHORT).show()
+                            return@observe
+                        }
+
+                        // Save token and userID using the centralized SharedPrefManager (robust)
+                        try {
+                            SharedPrefManager.saveAuthToken(this, token)
+                        } catch (e: Exception) {
+                            Log.w("LoginActivity", "Failed to save auth token: ${e.message}")
+                        }
+
+                        try {
+                            user?.let {
+                                SharedPrefManager.saveUserId(this, it.userID)
+                                // Save user account status (if provided). Default to "approved" to avoid accidental blocking when API doesn't supply status.
+                                SharedPrefManager.run {
+                                    // reuse existing preference file
+                                    val p = getSharedPreferences("capstone_prefs", MODE_PRIVATE)
+                                    p.edit().putString("user_status", it.status ?: "approved").apply()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.w("LoginActivity", "Failed to save user id/status: ${e.message}")
+                        }
 
                         // -----------------------------------------------------------------
-                        // NEW: Pusher Beams User Authentication
+                        // Pusher Beams: start + subscribe to interest
                         // -----------------------------------------------------------------
-                        val authToken = getAuthToken()
-                        if (authToken != null) {
-                            // Make sure PushNotifications SDK is started with your instance id
+                        val authToken = SharedPrefManager.getAuthToken(this)
+                        if (!authToken.isNullOrBlank()) {
                             try {
-                                PushNotifications.start(applicationContext, BEAMS_INSTANCE_ID)
+                                // Read instance id from resources; fallback to constant if placeholder not replaced
+                                val configured = getString(R.string.beams_instance_id)
+                                val instanceId = if (configured.isNullOrBlank() ||
+                                    configured == "REPLACE_WITH_YOUR_BEAMS_INSTANCE_ID")
+                                    FALLBACK_BEAMS_INSTANCE_ID else configured
+
+                                PushNotifications.start(applicationContext, instanceId)
+                                Log.d("PusherBeams", "PushNotifications.start with instanceId=$instanceId")
                             } catch (e: Exception) {
                                 Log.w("PusherBeams", "PushNotifications.start threw: ${e.message}")
                             }
 
-                            // Set the user id for Beams. Provide a BeamsCallback to receive success/failure.
                             try {
-                                // Instead of using setUserId (which requires a server auth endpoint), subscribe this device to an
-                                // interest named after the user. The server can publish to this interest (publishToInterests).
-                                val interest = "user_${user.userID}"
+                                val interest = "user_${user?.userID ?: "unknown"}"
+                                // Ensure we only have the current user interest
+                                try { PushNotifications.clearDeviceInterests() } catch (_: Exception) {}
                                 PushNotifications.addDeviceInterest(interest)
                                 Log.d("PusherBeams", "Subscribed device to interest: $interest")
-                                 Log.d("PusherBeams", "Requested setUserId for Beams user ${user.userID}")
                             } catch (e: Exception) {
-                                Log.e("PusherBeams", "setUserId threw: ${e.message}")
+                                Log.e("PusherBeams", "addDeviceInterest threw: ${e.message}")
                             }
                         } else {
                             Log.e("PusherBeams", "No auth token found. Cannot authenticate Beams user.")
                         }
 
-                        //hanggang dito yung sa beams
-
-                        when (user.roleID) {
+                        // Navigate based on role, handle nulls defensively
+                        val role = user?.roleID ?: -1L
+                        when (role) {
                             2L -> startActivity(Intent(this, OwnerMainActivity::class.java))
                             3L -> startActivity(Intent(this, CustomerMainActivity::class.java))
                             4L -> startActivity(Intent(this, DeliveryMainActivity::class.java))
-                            else -> Toast.makeText(this, "Unknown role ID: ${user.roleID}", Toast.LENGTH_SHORT).show()
+                            else -> Toast.makeText(this, "Unknown or missing role ID: $role", Toast.LENGTH_SHORT).show()
                         }
 
                         finish()
-                    } else {
-                        Toast.makeText(this, "Login failed: invalid credentials or token.", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Log.e("LoginActivity", "Exception processing login response: ${e.message}")
+                        Toast.makeText(this, "An error occurred while logging in.", Toast.LENGTH_SHORT).show()
                     }
                 }
             } else {
                 Toast.makeText(this, "Please enter both email and password", Toast.LENGTH_SHORT).show()
             }
         }
-    }
-
-    private fun saveAuthToken(token: String?) {
-        val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
-        sharedPref.edit { putString("auth_token", token) }
-    }
-
-
-    private fun saveUserID(userID: Long) {
-        val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
-        sharedPref.edit { putLong("userID", userID) }
-    }
-
-    // Persist the user's account status so other parts of the app can check it.
-    private fun saveUserStatus(status: String?) {
-        val sharedPref = getSharedPreferences("MyAppPrefs", MODE_PRIVATE)
-        // If API didn't send status, default to "approved" (assumption). Change this if your backend uses a different convention.
-        val valueToSave = status ?: "approved"
-        sharedPref.edit { putString("user_status", valueToSave) }
     }
 }

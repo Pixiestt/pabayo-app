@@ -23,6 +23,7 @@ data class RequestWizardData(
     // Additional data
     var sackCount: Int = 1,
     var pickupDate: String? = null,
+    var pickupTime: String? = null,
     var comment: String? = null
 )
 

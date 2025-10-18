@@ -17,6 +17,7 @@ fun buildCreateRequest(
         serviceID = serviceID,
         statusID = statusID,
         pickupDate = data.pickupDate ?: "",
+        pickupTime = data.pickupTime,
         deliveryDate = null,
         sackQuantity = data.sackCount,
         comment = data.comment ?: "",
@@ -25,4 +26,3 @@ fun buildCreateRequest(
         deliveryLocation = data.deliveryLocation
     )
 }
-
