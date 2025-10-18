@@ -11,6 +11,8 @@ import com.example.capstone2.R
 import com.example.capstone2.user.ViewUserProfileActivity
 import com.example.capstone2.data.models.Request
 import com.example.capstone2.repository.SharedPrefManager
+import com.example.capstone2.util.StatusColorProvider
+import com.example.capstone2.util.StatusNameProvider
 
 class TrackAdapter(
     private var requests: List<Request>,
@@ -44,8 +46,9 @@ class TrackAdapter(
         val rbMillingDone: RadioButton = itemView.findViewById(R.id.rbMillingDone)
         val rbDelivered: RadioButton = itemView.findViewById(R.id.rbDelivered)
 
-        val btnSubmit = itemView.findViewById<Button>(R.id.btnSubmit)
-        val btnMore = itemView.findViewById<ImageButton>(R.id.btnMore)
+        // Action buttons present in the owner item layout
+        val btnSubmit: Button = itemView.findViewById(R.id.btnSubmit)
+        val btnMore: ImageButton = itemView.findViewById(R.id.btnMore)
         val btnRowMessage: Button? = itemView.findViewById(R.id.btnRowMessage)
     }
 
@@ -82,21 +85,13 @@ class TrackAdapter(
 
         // Current status text and color
         val currentStatusInt = try { req.statusID.toInt() } catch (_: Exception) { 0 }
-        val currentStatusText = getStatusText(currentStatusInt)
+        val currentStatusText = StatusNameProvider.getNameFor(currentStatusInt)
         holder.tvCurrentStatus.text = ctx.getString(R.string.status_format, currentStatusText)
 
-        val statusColor = when (currentStatusInt) {
-            10 -> "#4CAF50"
-            2, 3 -> "#FF9800"
-            4 -> "#2196F3"
-            5 -> "#9C27B0"
-            6, 7 -> "#FF5722"
-            12 -> "#2E7D32"
-            else -> "#3F51B5"
-        }
         try {
-            holder.tvCurrentStatus.setTextColor(android.graphics.Color.parseColor(statusColor))
-        } catch (_: Exception) { /* ignore color parse issues */ }
+            val colorInt = StatusColorProvider.getColorFor(currentStatusInt)
+            holder.tvCurrentStatus.setTextColor(colorInt)
+        } catch (_: Exception) { /* ignore */ }
 
         // NEW: Payment amount line for owner row if available
         holder.tvPaymentAmount?.let { tv ->
@@ -380,24 +375,5 @@ class TrackAdapter(
     fun updateRequests(newRequests: List<Request>) {
         this.requests = newRequests
         notifyDataSetChanged()
-    }
-
-    private fun getStatusText(statusId: Int): String {
-        return when (statusId) {
-            1 -> "Subject for approval"
-            2 -> "Delivery boy pickup"
-            3 -> "Waiting for customer drop off"
-            4 -> "Pending"
-            5 -> "Processing"
-            6 -> "Rider out for delivery"
-            7 -> "Waiting for customer to claim"
-            8 -> "Completed"
-            9 -> "Rejected"
-            10 -> "Request Accepted"
-            11 -> "Partially Accepted"
-            12 -> "Milling done"
-            13 -> "Delivered"
-            else -> "Unknown status"
-        }
     }
 }

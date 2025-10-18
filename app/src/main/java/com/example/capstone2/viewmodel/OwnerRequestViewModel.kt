@@ -244,26 +244,4 @@ class OwnerRequestViewModel(
             fallback
         }
     }
-
-    /**
-     * Get text description for status ID
-     */
-    private fun getStatusText(statusId: Int): String {
-        return when (statusId) {
-            1 -> "Subject for approval"
-            2 -> "Delivery boy pickup"
-            3 -> "Waiting for customer drop off"
-            4 -> "Pending"
-            5 -> "Processing"
-            6 -> "Rider out for delivery"
-            7 -> "Waiting for customer pickup"
-            8 -> "Completed"
-            9 -> "Rejected"
-            10 -> "Request Accepted"
-            11 -> "Partially Accepted"
-            12 -> "Milling done"
-            13 -> "Delivered"
-            else -> "Unknown status"
-        }
-    }
 }

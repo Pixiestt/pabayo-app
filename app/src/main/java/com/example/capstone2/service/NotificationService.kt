@@ -6,6 +6,7 @@ import com.example.capstone2.data.models.Request
 import com.example.capstone2.repository.NotificationRepository
 import com.example.capstone2.util.NotificationUtils
 import com.example.capstone2.repository.SharedPrefManager
+import com.example.capstone2.util.StatusNameProvider
 
 /**
  * Service for handling app notifications
@@ -26,7 +27,7 @@ class NotificationService(
     fun notifyOwnerNewRequest(request: CreateRequest) {
         // Show local notification to owner
         val title = "New Request"
-        val message = "New service request received for ${'$'}{request.sackQuantity} sacks"
+        val message = "New service request received for ${request.sackQuantity} sacks"
 
         // Only show local notification if the developer flag is enabled. Default: false
         if (shouldShowLocalNotifications()) {
@@ -47,7 +48,7 @@ class NotificationService(
      */
     fun notifyCustomerRequestAccepted(request: Request) {
         val title = "Request Accepted"
-        val message = "Your request #${'$'}{request.requestID} has been accepted"
+        val message = "Your request #${request.requestID} has been accepted"
 
         if (shouldShowLocalNotifications()) {
             NotificationUtils.showNotification(
@@ -65,10 +66,10 @@ class NotificationService(
      * Send a notification when an owner updates a request status
      */
     fun notifyCustomerStatusUpdate(request: Request, newStatusID: Int) {
-        val statusText = getStatusText(newStatusID)
+        val statusText = StatusNameProvider.getNameFor(newStatusID)
 
         val title = "Request Status Updated"
-        val message = "Your request #${'$'}{request.requestID} status changed to: $statusText"
+        val message = "Your request #${request.requestID} status changed to: $statusText"
 
         if (shouldShowLocalNotifications()) {
             NotificationUtils.showNotification(
@@ -87,27 +88,6 @@ class NotificationService(
      */
     private fun generateNotificationId(): Int {
         return (System.currentTimeMillis() % 10000).toInt()
-    }
-
-    /**
-     * Get text description for status ID
-     */
-    private fun getStatusText(statusId: Int): String {
-        return when (statusId) {
-            1 -> "Subject for approval"
-            2 -> "Delivery boy pickup"
-            3 -> "Waiting for customer drop off"
-            4 -> "Pending"
-            5 -> "Processing"
-            6 -> "Rider out for delivery"
-            7 -> "Waiting for customer pickup"
-            8 -> "Completed"
-            9 -> "Rejected"
-            10 -> "Request Accepted"
-            11 -> "Partially Accepted"
-            12 -> "Milling done"
-            else -> "Unknown status"
-        }
     }
 
     /**
