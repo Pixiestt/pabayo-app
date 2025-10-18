@@ -20,7 +20,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Date filter row -->
+    <!-- Filter actions row (date range is picked inside the Filter button) -->
     <LinearLayout
         android:id="@+id/dateFilterRow"
         android:layout_width="0dp"
@@ -31,38 +31,10 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <EditText
-            android:id="@+id/etStartDateHistoryOwner"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="@string/start_date_hint"
-            android:autofillHints="date"
-            android:focusable="false"
-            android:clickable="true"
-            android:inputType="date"
-            android:drawableEnd="@android:drawable/ic_menu_my_calendar"
-            android:padding="8dp" />
-
-        <EditText
-            android:id="@+id/etEndDateHistoryOwner"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:hint="@string/end_date_hint"
-            android:autofillHints="date"
-            android:focusable="false"
-            android:clickable="true"
-            android:inputType="date"
-            android:drawableEnd="@android:drawable/ic_menu_my_calendar"
-            android:padding="8dp" />
-
         <Button
             android:id="@+id/btnFilterHistoryOwner"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
             android:text="@string/action_filter" />
 
         <Button
@@ -71,6 +43,13 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="@string/action_clear" />
+
+        <Button
+            android:id="@+id/btnExportPdfOwner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/action_export_pdf" />
 
     </LinearLayout>
 
