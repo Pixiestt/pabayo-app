@@ -20,13 +20,20 @@ class RequestController extends Controller
     private function friendlyStatusLabel($statusId): string
     {
         $map = [
-            1  => 'Pending Approval',
-            2  => 'Pickup In Progress',
-            4  => 'Pickup Completed',
-            6  => 'Out for Delivery',
+            // Canonical mapping aligned with Android client
+            1  => 'Subject for approval',
+            2  => 'Delivery boy pickup',
+            3  => 'Waiting for customer drop off',
+            4  => 'Pending',
+            5  => 'Processing',
+            6  => 'Rider out for delivery',
+            7  => 'Waiting for customer to claim',
+            8  => 'Completed',
             9  => 'Rejected',
-            10 => 'Accepted',
-            12 => 'Milling Done',
+            10 => 'Request Accepted',
+            11 => 'Partially Accepted',
+            12 => 'Milling done',
+            13 => 'Delivered',
         ];
         return $map[$statusId] ?? ('Status #' . $statusId);
     }

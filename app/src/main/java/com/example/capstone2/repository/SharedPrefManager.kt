@@ -332,10 +332,23 @@ object SharedPrefManager {
         return null
     }
 
+    // NEW: format helper to produce ISO_OFFSET_DATE_TIME from epoch millis using system zone
+    private fun formatIsoFromEpochMillis(ms: Long): String {
+        return try {
+            java.time.Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        } catch (_: Exception) {
+            // Fallback: best-effort local date-time without offset
+            val ldt = java.time.Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            ldt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+        }
+    }
+
     /**
      * Append an entry if the last stored statusID differs. Returns updated list.
      * If there is no history yet, initializes it with the provided entry.
      * If the new statusID is the same but the provided changedAtIso is later than the stored time, update the last entry's timestamp (and text if it differs).
+     * Additionally, if a jump skips known intermediate steps (e.g., 4 -> 12), we backfill the missing step(s) with sensible timestamps
+     * so the timeline accurately reflects the operations performed rapidly.
      */
     fun appendStatusIfChanged(
         ctx: Context,
@@ -353,6 +366,27 @@ object SharedPrefManager {
         }
         val last = current.last()
         if (last.statusID != newStatusId) {
+            // Backfill common missing intermediate states when jumping quickly
+            val lastAtMs = parseEpochMillisFlexible(last.at)
+            val newAtMs = parseEpochMillisFlexible(changedAtIso)
+
+            fun safeBetweenTimestamp(offsetMillisFromNew: Long, minAfterLast: Long?): String {
+                val base = (newAtMs ?: System.currentTimeMillis()) + offsetMillisFromNew
+                val bounded = if (minAfterLast != null) kotlin.math.max(base, minAfterLast + 1) else base
+                return formatIsoFromEpochMillis(bounded)
+            }
+
+            // Known mapping: Processing (5) should precede Milling done (12). If we jumped to 12 without 5, insert 5.
+            if (newStatusId == 12) {
+                val hadProcessingAlready = current.any { it.statusID == 5 }
+                val lastId = last.statusID
+                if (!hadProcessingAlready && lastId != 5) {
+                    val syntheticAt = safeBetweenTimestamp(-500, lastAtMs)
+                    current.add(StatusChangeEntry(5, "Processing", syntheticAt))
+                }
+            }
+
+            // Now append the actual new status
             current.add(StatusChangeEntry(newStatusId, newStatusText, changedAtIso))
             saveRequestStatusHistory(ctx, requestId, current)
         } else {

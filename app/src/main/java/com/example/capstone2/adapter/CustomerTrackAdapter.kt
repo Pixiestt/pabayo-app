@@ -1,6 +1,7 @@
 package com.example.capstone2.adapter
 
 import android.app.Dialog
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,6 +14,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.capstone2.R
 import com.example.capstone2.data.models.Request
 import com.example.capstone2.repository.SharedPrefManager
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.PorterDuff
+import android.os.Build
+import com.example.capstone2.util.StatusColorProvider
+import androidx.core.graphics.drawable.DrawableCompat
 
 class CustomerTrackAdapter(
     private var requests: List<Request>,
@@ -128,6 +135,12 @@ class CustomerTrackAdapter(
         val statusText = statusTextOf(request.statusID)
         holder.status.text = ctx.getString(R.string.status_format, statusText)
 
+        // Apply centralized status color
+        try {
+            val colorInt = StatusColorProvider.getColorFor(request.statusID)
+            holder.status.setTextColor(colorInt)
+        } catch (_: Exception) { /* ignore */ }
+
         // NEW: show payment amount on customer row if available (robust fallbacks)
         holder.tvPaymentAmount?.let { tv ->
             val amt = request.paymentAmount
@@ -182,7 +195,6 @@ class CustomerTrackAdapter(
     fun updateRequests(newRequests: List<Request>) {
         // Persist a local timeline of status changes.
         // For each request, append an entry if the status has changed compared to the last stored one.
-        val ctx = try { (requests.firstOrNull()?.let { null }) ; null } catch (_: Exception) { null }
         // Since we don't have a direct Context here, we'll append later when opening details.
         // However, we can still filter the list now.
 
@@ -356,8 +368,9 @@ class CustomerTrackAdapter(
             4 -> 40   // Pending
             5 -> 55   // Processing
             12 -> 70  // Milling done
-            6-> 85 // Rider out for delivery
-            13 -> 100  // Delivered OR Waiting for customer to claim
+            6 -> 85   // Rider out for delivery
+            7 -> 95   // Waiting for customer to claim
+            13 -> 100 // Delivered
             8 -> 100  // Completed
             9 -> 0    // Rejected
             else -> 0
@@ -366,7 +379,75 @@ class CustomerTrackAdapter(
         // Explicitly show progress UI for customers
         tvDetailProgressLabel.visibility = View.VISIBLE
         progressBar.visibility = View.VISIBLE
-        progressBar.progress = progress
+        // Defensive: ensure determinate horizontal progress and max
+        try {
+            progressBar.isIndeterminate = false
+        } catch (_: Exception) { }
+        try {
+            progressBar.max = 100
+        } catch (_: Exception) { }
+
+        // Tint the progress bar according to centralized status color
+        try {
+            val colorInt = StatusColorProvider.getColorFor(request.statusID)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                progressBar.progressTintList = ColorStateList.valueOf(colorInt)
+                try { progressBar.progressBackgroundTintList = ColorStateList.valueOf(Color.parseColor("#DDDDDD")) } catch (_: Exception) {}
+            } else {
+                try {
+                    // Wrap the drawable and apply a tint list which works better across many pre-Lollipop drawables
+                    val original = progressBar.progressDrawable
+                    val wrapped = DrawableCompat.wrap(original).mutate()
+                    DrawableCompat.setTintList(wrapped, ColorStateList.valueOf(colorInt))
+                    // Also tint the secondary/progress background layers if present
+                    try {
+                        if (wrapped is android.graphics.drawable.LayerDrawable) {
+                            val sec = wrapped.findDrawableByLayerId(android.R.id.secondaryProgress)
+                            sec?.setColorFilter(Color.parseColor("#DDDDDD"), PorterDuff.Mode.SRC_IN)
+                        }
+                    } catch (_: Exception) { }
+                    progressBar.progressDrawable = wrapped
+                } catch (_: Exception) {
+                    // Fallback: color filter on the drawable
+                    try {
+                        val pd = progressBar.progressDrawable
+                        pd.setColorFilter(colorInt, PorterDuff.Mode.SRC_IN)
+                        if (pd is android.graphics.drawable.LayerDrawable) {
+                            val progLayer = pd.findDrawableByLayerId(android.R.id.progress)
+                            progLayer?.setColorFilter(colorInt, PorterDuff.Mode.SRC_IN)
+                        }
+                    } catch (_: Exception) { }
+                }
+            }
+            tvDetailProgressLabel.setTextColor(colorInt)
+        } catch (_: Exception) { /* ignore color issues */ }
+
+        // Debug log the computed progress and status so we can trace UI problems at runtime
+        try {
+            Log.d("CustomerTrackAdapter", "Request=${request.requestID} status=${request.statusID} computedProgress=$progress")
+        } catch (_: Exception) { }
+
+        // Ensure progress assignment happens on the UI thread and invalidate to force redraw
+        try {
+            if (progressBar.isLaidOut) {
+                progressBar.progress = progress
+                progressBar.invalidate()
+                progressBar.refreshDrawableState()
+            } else {
+                progressBar.post {
+                    progressBar.progress = progress
+                    progressBar.invalidate()
+                    progressBar.refreshDrawableState()
+                }
+            }
+        } catch (_: Exception) {
+            // Fallback direct set
+            try {
+                progressBar.progress = progress
+                progressBar.invalidate()
+                progressBar.refreshDrawableState()
+            } catch (_: Exception) { }
+        }
         tvDetailProgressLabel.text = context.getString(R.string.progress_format, progress)
 
         // --- Build and show status timeline ---
@@ -402,14 +483,48 @@ class CustomerTrackAdapter(
                 if (!at.contains("+") && !at.contains("Z")) entry.copy(at = canonicalIso(at, assumeUtcIfNaive = true)) else entry
             }
 
+            // NEW: Backfill Processing (5) just for display if 12 exists but 5 is missing
+            val adjustedHistory = run {
+                val has12 = displayHistory.any { it.statusID == 12 }
+                val has5 = displayHistory.any { it.statusID == 5 }
+                if (has12 && !has5) {
+                    val list = displayHistory.toMutableList()
+                    // Find the first 12 entry (latest by time will be sorted later)
+                    val twelve = list.firstOrNull { it.statusID == 12 }
+                    if (twelve != null) {
+                        val twelveMs = try { parseFlexibleToZdt(twelve.at, assumeUtcIfNaive = true)?.toInstant()?.toEpochMilli() } catch (_: Exception) { null }
+                        // Choose a time slightly before 12 and after the most recent prior entry if possible
+                        var candidate = if (twelveMs != null) twelveMs - 500 else null
+                        val priorMax = list
+                            .filter { it !== twelve }
+                            .mapNotNull { h -> try { parseFlexibleToZdt(h.at, assumeUtcIfNaive = true)?.toInstant()?.toEpochMilli() } catch (_: Exception) { null } }
+                            .filter { ms -> candidate == null || ms < (twelveMs ?: Long.MAX_VALUE) }
+                            .maxOrNull()
+                        if (priorMax != null && candidate != null && candidate <= priorMax) {
+                            candidate = priorMax + 1
+                        }
+                        val iso = try {
+                            if (candidate != null) java.time.Instant.ofEpochMilli(candidate)
+                                .atZone(sysZone)
+                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX"))
+                            else canonicalIso(twelve.at, assumeUtcIfNaive = true)
+                        } catch (_: Exception) {
+                            canonicalIso(twelve.at, assumeUtcIfNaive = true)
+                        }
+                        list.add(SharedPrefManager.StatusChangeEntry(5, "Processing", iso))
+                    }
+                    list
+                } else displayHistory
+            }
+
             var latestInstant: java.time.Instant? = null
 
-            if (displayHistory.isNotEmpty() && llTimelineContainer != null && tvTimelineHeader != null) {
+            if (adjustedHistory.isNotEmpty() && llTimelineContainer != null && tvTimelineHeader != null) {
                 tvTimelineHeader.visibility = View.VISIBLE
                 llTimelineContainer.visibility = View.VISIBLE
                 llTimelineContainer.removeAllViews()
                 // Sort by actual timestamp (latest first)
-                val sorted = displayHistory.sortedByDescending { h ->
+                val sorted = adjustedHistory.sortedByDescending { h ->
                     try { parseFlexibleToZdt(h.at, assumeUtcIfNaive = true)?.toInstant() } catch (_: Exception) { null }
                 }
                 // Track latest instant from history
