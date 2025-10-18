@@ -232,6 +232,7 @@ class CustomerTrackAdapter(
         val tvTimelineHeader: TextView? = dialog.findViewById(R.id.tvTimelineHeader)
         val llTimelineContainer: LinearLayout? = dialog.findViewById(R.id.llTimelineContainer)
         val tvDetailPaymentAmount: TextView? = dialog.findViewById(R.id.tvDetailPaymentAmount)
+        val tvDetailMilledKg: TextView? = dialog.findViewById(R.id.tvDetailMilledKg)
 
         // Use formatted string resources to populate the dialog
         tvDetailCustomerName.text = context.getString(R.string.customer_format, request.customerName)
@@ -250,6 +251,17 @@ class CustomerTrackAdapter(
             } else {
                 tv.visibility = View.VISIBLE
                 tv.text = context.getString(R.string.payment_amount_not_set)
+            }
+        }
+
+        // NEW: Show milled rice weight (kg) if available
+        tvDetailMilledKg?.let { tv ->
+            val kg = request.milledKg
+            if (kg != null) {
+                tv.visibility = View.VISIBLE
+                tv.text = context.getString(R.string.milled_kg_format, kg)
+            } else {
+                tv.visibility = View.GONE
             }
         }
 

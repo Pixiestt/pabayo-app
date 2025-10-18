@@ -13,7 +13,6 @@ import com.example.capstone2.data.models.Request
 import com.example.capstone2.repository.SharedPrefManager
 import com.example.capstone2.util.StatusColorProvider
 import com.example.capstone2.util.StatusNameProvider
-
 class TrackAdapter(
     private var requests: List<Request>,
     private val onButtonClick: (Request, Int) -> Unit,
@@ -34,6 +33,7 @@ class TrackAdapter(
         val tvDeliveryLocation: TextView = itemView.findViewById(R.id.tvDeliveryLocation)
         val tvCurrentStatus: TextView = itemView.findViewById(R.id.tvCurrentStatus)
         val tvPaymentAmount: TextView? = itemView.findViewById(R.id.tvPaymentAmount)
+        val tvMilledKg: TextView? = itemView.findViewById(R.id.tvMilledKg)
         val tvPickupPreparingMessage: TextView? = itemView.findViewById(R.id.tvPickupPreparingMessage)
 
         val rgStatusOptions: RadioGroup = itemView.findViewById(R.id.rgStatusOptions)
@@ -84,10 +84,9 @@ class TrackAdapter(
         holder.tvDeliveryLocation.visibility = View.GONE
 
         // Current status text and color
-        val currentStatusInt = try { req.statusID.toInt() } catch (_: Exception) { 0 }
+        val currentStatusInt = try { req.statusID } catch (_: Exception) { 0 }
         val currentStatusText = StatusNameProvider.getNameFor(currentStatusInt)
         holder.tvCurrentStatus.text = ctx.getString(R.string.status_format, currentStatusText)
-
         try {
             val colorInt = StatusColorProvider.getColorFor(currentStatusInt)
             holder.tvCurrentStatus.setTextColor(colorInt)
@@ -101,6 +100,17 @@ class TrackAdapter(
             if (amt != null && amt >= 0.0) {
                 tv.visibility = View.VISIBLE
                 tv.text = ctx.getString(R.string.payment_amount_format, amt)
+            } else {
+                tv.visibility = View.GONE
+            }
+        }
+
+        // NEW: milled kg if available
+        holder.tvMilledKg?.let { tv ->
+            val kg = req.milledKg
+            if (kg != null && kg >= 0.0) {
+                tv.visibility = View.VISIBLE
+                tv.text = ctx.getString(R.string.milled_kg_format, kg)
             } else {
                 tv.visibility = View.GONE
             }
@@ -375,5 +385,24 @@ class TrackAdapter(
     fun updateRequests(newRequests: List<Request>) {
         this.requests = newRequests
         notifyDataSetChanged()
+    }
+
+    private fun getStatusText(statusId: Int): String {
+        return when (statusId) {
+            1 -> "Subject for approval"
+            2 -> "Delivery boy pickup"
+            3 -> "Waiting for customer drop off"
+            4 -> "Pending"
+            5 -> "Processing"
+            6 -> "Rider out for delivery"
+            7 -> "Waiting for customer to claim"
+            8 -> "Completed"
+            9 -> "Rejected"
+            10 -> "Request Accepted"
+            11 -> "Partially Accepted"
+            12 -> "Milling done"
+            13 -> "Delivered"
+            else -> "Unknown status"
+        }
     }
 }

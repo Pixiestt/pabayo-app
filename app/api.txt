@@ -33,8 +33,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/customer/{customerID}/requests', [RequestController::class, 'getCustomerRequests']);
 
-    // edit button
-    Route::middleware('auth:sanctum')->put('requests/{id}', [RequestController::class, 'update']);
+    // edit button (no need to re-declare middleware inside the group)
+    Route::put('requests/{id}', [RequestController::class, 'update']);
 
     // message routes
     Route::post('/messages/send', [MessageController::class, 'store']);
@@ -55,8 +55,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/deliveryboy/requests', [RequestController::class, 'getDeliveryBoyRequests']);
 
-
-    Route::get('/customer/{customerID}/requests', [RequestController::class, 'getCustomerRequests']);
-
+    // Queue view for customers
     Route::get('/customer/{customerID}/requests/queue', [RequestController::class, 'getCustomerRequestQueue']);
 });
