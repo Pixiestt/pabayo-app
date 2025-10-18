@@ -91,6 +91,14 @@ class DeliveryCardAdapter(
 
             holder.btnInitiate.setOnClickListener {
                 // Optimistic UI updates; actual network handled by fragment via callback
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        requestRepository.updateRequestStatus(req.requestID, 2)
+                    } catch (e: Exception) {
+                        Log.e("DeliveryCardAdapter", "Failed to update pickup status", e)
+                    }
+                }
+                // Optimistic UI updates; actual network handled by fragment via callback
                 holder.tvStatusLabel.text = ongoingText
                 holder.btnInitiate.isEnabled = false
                 holder.btnDone.isEnabled = true
@@ -98,11 +106,19 @@ class DeliveryCardAdapter(
             }
 
             holder.btnDone.setOnClickListener {
-                // Optimistic UI updates; actual network handled by fragment via callback
+                onAction(req, DeliveryAction.DONE)
                 holder.tvStatusLabel.text = doneText
                 holder.btnInitiate.isEnabled = false
                 holder.btnDone.isEnabled = false
-                onAction(req, DeliveryAction.DONE)
+
+                // Add this coroutine to update backend status to 4 (pending)
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        requestRepository.updateRequestStatus(req.requestID, 4)
+                    } catch (e: Exception) {
+                        Log.e("DeliveryCardAdapter", "Failed to update pickup done status", e)
+                    }
+                }
             }
 
         } else { // DELIVERIES
@@ -110,31 +126,49 @@ class DeliveryCardAdapter(
             holder.btnDone.text = ctx.getString(R.string.action_delivery_done)
 
             val statusText = when (req.statusID) {
-                12 -> ctx.getString(R.string.status_milling_ready_delivery)
-                6 -> ctx.getString(R.string.status_ongoing_delivery)
                 13 -> ctx.getString(R.string.status_delivery_done)
+                6 -> ctx.getString(R.string.status_ongoing_delivery)
                 else -> pendingText
             }
             holder.tvStatusLabel.text = statusText
-
-            // Only enable "Initiate Delivery" if statusID = 12 (Milling done)
-            holder.btnInitiate.isEnabled = req.statusID == 12
-            // "Delivery Done" is only enabled if statusID = 6 (Rider out for delivery)
+            holder.btnInitiate.isEnabled = req.statusID != 6 && req.statusID != 13
             holder.btnDone.isEnabled = req.statusID == 6
 
             holder.btnInitiate.setOnClickListener {
-                // Optimistic UI; network handled by fragment
-                holder.tvStatusLabel.text = ctx.getString(R.string.status_ongoing_delivery)
-                holder.btnInitiate.isEnabled = false
-                holder.btnDone.isEnabled = true
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val response = requestRepository.updateRequestStatus(req.requestID, 6) // 6 = Rider out for delivery
+                        if (response.isSuccessful) {
+                            req.statusID = 6
+                            CoroutineScope(Dispatchers.Main).launch {
+                                holder.tvStatusLabel.text = ctx.getString(R.string.status_ongoing_delivery)
+                                holder.btnInitiate.isEnabled = false
+                                holder.btnDone.isEnabled = true
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("DeliveryCardAdapter", "Error initiating delivery", e)
+                    }
+                }
                 onAction(req, DeliveryAction.INITIATE)
             }
 
             holder.btnDone.setOnClickListener {
-                // Optimistic UI; network handled by fragment
-                holder.tvStatusLabel.text = ctx.getString(R.string.status_delivery_done)
-                holder.btnInitiate.isEnabled = false
-                holder.btnDone.isEnabled = false
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val response = requestRepository.updateRequestStatus(req.requestID, 13) // 13 = Delivered
+                        if (response.isSuccessful) {
+                            req.statusID = 13
+                            CoroutineScope(Dispatchers.Main).launch {
+                                holder.tvStatusLabel.text = ctx.getString(R.string.status_delivery_done)
+                                holder.btnInitiate.isEnabled = false
+                                holder.btnDone.isEnabled = false
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("DeliveryCardAdapter", "Error marking delivery done", e)
+                    }
+                }
                 onAction(req, DeliveryAction.DONE)
             }
         }
