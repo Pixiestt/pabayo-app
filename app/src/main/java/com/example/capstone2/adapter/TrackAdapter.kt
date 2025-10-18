@@ -31,6 +31,7 @@ class TrackAdapter(
         val tvPickupLocation: TextView = itemView.findViewById(R.id.tvPickupLocation)
         val tvDeliveryLocation: TextView = itemView.findViewById(R.id.tvDeliveryLocation)
         val tvCurrentStatus: TextView = itemView.findViewById(R.id.tvCurrentStatus)
+        val tvPaymentAmount: TextView? = itemView.findViewById(R.id.tvPaymentAmount)
         val tvPickupPreparingMessage: TextView? = itemView.findViewById(R.id.tvPickupPreparingMessage)
 
         val rgStatusOptions: RadioGroup = itemView.findViewById(R.id.rgStatusOptions)
@@ -46,6 +47,13 @@ class TrackAdapter(
         val btnSubmit = itemView.findViewById<Button>(R.id.btnSubmit)
         val btnMore = itemView.findViewById<ImageButton>(R.id.btnMore)
         val btnRowMessage: Button? = itemView.findViewById(R.id.btnRowMessage)
+    }
+
+    // Helper to parse formatted currency strings like "₱1,234.50" safely
+    private fun parseAmountStringSafe(raw: String?): Double? {
+        if (raw.isNullOrBlank()) return null
+        val cleaned = raw.replace(Regex("[^0-9.,-]"), "").replace(",", "")
+        return cleaned.toDoubleOrNull()
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TrackViewHolder {
@@ -89,6 +97,19 @@ class TrackAdapter(
         try {
             holder.tvCurrentStatus.setTextColor(android.graphics.Color.parseColor(statusColor))
         } catch (_: Exception) { /* ignore color parse issues */ }
+
+        // NEW: Payment amount line for owner row if available
+        holder.tvPaymentAmount?.let { tv ->
+            val amt = req.paymentAmount
+                ?: req.payment?.amount
+                ?: parseAmountStringSafe(req.payment?.amountString)
+            if (amt != null && amt >= 0.0) {
+                tv.visibility = View.VISIBLE
+                tv.text = ctx.getString(R.string.payment_amount_format, amt)
+            } else {
+                tv.visibility = View.GONE
+            }
+        }
 
         // All radio buttons list
         val allRadioButtons = listOf(
@@ -258,6 +279,7 @@ class TrackAdapter(
             val tvDetailComment: TextView = dlgView.findViewById(R.id.tvDetailComment)
             val tvDetailSubmittedAt: TextView = dlgView.findViewById(R.id.tvDetailSubmittedAt)
             val tvDetailContact: TextView = dlgView.findViewById(R.id.tvDetailContact)
+            val tvDetailPaymentAmount: TextView = dlgView.findViewById(R.id.tvDetailPaymentAmount)
             val btnMsg: Button = dlgView.findViewById(R.id.btnMessage)
             val btnViewProfile: Button = dlgView.findViewById(R.id.btnViewProfile)
             val btnClose: Button = dlgView.findViewById(R.id.btnClose)
@@ -273,6 +295,18 @@ class TrackAdapter(
             tvDetailSchedule.text = ctx.getString(R.string.schedule_format_owner, req.schedule ?: ctx.getString(R.string.not_set))
             tvDetailComment.text = ctx.getString(R.string.comment_format, req.comment ?: "None")
             tvDetailSubmittedAt.text = ctx.getString(R.string.submitted_at_format, req.submittedAt ?: "Unknown")
+
+            // Payment amount in dialog
+            val amt = req.paymentAmount
+                ?: req.payment?.amount
+                ?: parseAmountStringSafe(req.payment?.amountString)
+            if (amt != null && amt >= 0.0) {
+                tvDetailPaymentAmount.visibility = View.VISIBLE
+                tvDetailPaymentAmount.text = ctx.getString(R.string.payment_amount_format, amt)
+            } else {
+                tvDetailPaymentAmount.visibility = View.VISIBLE
+                tvDetailPaymentAmount.text = ctx.getString(R.string.payment_amount_not_set)
+            }
 
             // Initially show either the static contact if present or a loading state and fetch
             if (!req.contactNumber.isNullOrBlank()) {

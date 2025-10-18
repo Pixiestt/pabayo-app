@@ -77,6 +77,7 @@ class RequestAdapter(
         val tvDetailDeliveryLocation: TextView = dialog.findViewById(R.id.tvDetailDeliveryLocation)
         val tvDetailComment: TextView = dialog.findViewById(R.id.tvDetailComment)
         val tvDetailSubmittedAt: TextView = dialog.findViewById(R.id.tvDetailSubmittedAt)
+        val tvDetailPaymentAmount: TextView? = dialog.findViewById(R.id.tvDetailPaymentAmount)
         val btnClose: Button = dialog.findViewById(R.id.btnClose)
         val btnMessage: Button? = dialog.findViewById(R.id.btnMessage)
 
@@ -121,6 +122,17 @@ class RequestAdapter(
 
         tvDetailComment.text = context.getString(R.string.comment_format, request.comment ?: "None")
         tvDetailSubmittedAt.text = context.getString(R.string.submitted_at_format, request.submittedAt ?: "Unknown")
+
+        // Show payment amount if available
+        val amt = request.paymentAmount
+        if (tvDetailPaymentAmount != null) {
+            tvDetailPaymentAmount.visibility = View.VISIBLE
+            if (amt != null && amt >= 0.0) {
+                tvDetailPaymentAmount.text = context.getString(R.string.payment_amount_format, amt)
+            } else {
+                tvDetailPaymentAmount.text = context.getString(R.string.payment_amount_not_set)
+            }
+        }
 
         // Wire the Message button so owner/customer can start 1:1 chat
         btnMessage?.let { btn ->

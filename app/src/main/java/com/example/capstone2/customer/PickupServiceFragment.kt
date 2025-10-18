@@ -43,6 +43,10 @@ class PickupServiceFragment : Fragment() {
     private val timeFormat24 = SimpleDateFormat("HH:mm", Locale.UK)
     private val TAG = "PickupServiceFragment"
 
+    // Business hour limits (inclusive). Only allow pickup times between these hours (08:00 - 17:00)
+    private val BUSINESS_START_HOUR = 8
+    private val BUSINESS_END_HOUR = 17
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -124,9 +128,17 @@ class PickupServiceFragment : Fragment() {
                 Toast.makeText(requireContext(), "Previous pickup date was in the past. Please choose a new date.", Toast.LENGTH_SHORT).show()
             }
         }
+        // If a time is prefilled but outside business hours, clear it (don't auto-accept invalid times)
         wizard.pickupTime?.let { pt ->
-            etPickupTime.setText(pt)
-            hasPrefill = true
+            if (isTimeWithinBusinessHours(pt)) {
+                etPickupTime.setText(pt)
+                hasPrefill = true
+            } else {
+                // drop invalid prefills so user notices and chooses a valid time
+                wizard.pickupTime = null
+                // don't spam user with toast on fragment load, but set hint for clarity
+                etPickupTime.hint = "Select a pickup time (08:00-17:00)"
+            }
         }
         if (hasPrefill) {
             pickupDetailsContainer.visibility = View.VISIBLE
@@ -260,7 +272,13 @@ class PickupServiceFragment : Fragment() {
                 val cal = (calendar.clone() as Calendar)
                 cal.set(Calendar.HOUR_OF_DAY, selHour)
                 cal.set(Calendar.MINUTE, selMinute)
-                etPickupTime.setText(timeFormat24.format(cal.time))
+                val selected = timeFormat24.format(cal.time)
+                if (!isTimeWithinBusinessHours(selected)) {
+                    Toast.makeText(requireContext(), "Pickup time must be between 08:00 and 17:00", Toast.LENGTH_SHORT).show()
+                    // do not set invalid time
+                } else {
+                    etPickupTime.setText(selected)
+                }
             }, hour, minute, true).show()
         }
 
@@ -286,6 +304,15 @@ class PickupServiceFragment : Fragment() {
                 if (isPast) {
                     etPickupDate.error = "Pickup date can’t be in the past"
                     Toast.makeText(requireContext(), "Please choose today or a future date.", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+            }
+
+            // Validate pickup time if provided: only allow 08:00 - 17:00 for pickup service
+            if (radioGroup.checkedRadioButtonId == R.id.rbPickupFromLocation && pickupTime != null) {
+                if (!isTimeWithinBusinessHours(pickupTime)) {
+                    etPickupTime.error = "Pickup time must be between 08:00 and 17:00"
+                    Toast.makeText(requireContext(), "Pickup time must be between 08:00 and 17:00", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
             }
@@ -337,5 +364,25 @@ class PickupServiceFragment : Fragment() {
         c.set(Calendar.SECOND, 0)
         c.set(Calendar.MILLISECOND, 0)
         return c.timeInMillis
+    }
+
+    // Helper: validate a time string in HH:mm is within business hours (inclusive)
+    private fun isTimeWithinBusinessHours(timeStr: String?): Boolean {
+        if (timeStr.isNullOrBlank()) return false
+        return try {
+            val parsed = timeFormat24.parse(timeStr)
+            val cal = Calendar.getInstance()
+            cal.time = parsed
+            val hour = cal.get(Calendar.HOUR_OF_DAY)
+            val minute = cal.get(Calendar.MINUTE)
+            // allow any minute within the hour range; inclusive of start and end hours
+            if (hour < BUSINESS_START_HOUR) return false
+            if (hour > BUSINESS_END_HOUR) return false
+            // When hour == BUSINESS_END_HOUR (17), allow minutes == 0 only to enforce up-to-17:00 exactly
+            if (hour == BUSINESS_END_HOUR && minute > 0) return false
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 }

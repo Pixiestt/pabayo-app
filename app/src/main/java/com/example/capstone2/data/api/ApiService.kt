@@ -127,6 +127,13 @@ interface ApiService {
         @Query("statusID") statusID: Int
     ): Response<RequestResponse>
 
+    // New: set/update payment amount for a request
+    @PUT("api/requests/{requestID}/payment")
+    suspend fun setPaymentAmount(
+        @Path("requestID") requestID: Long,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<ResponseBody>
+
     // Some backends use 'status' instead of 'statusID'
     @GET("api/requests")
     suspend fun getRequestsByStatusName(
@@ -135,4 +142,10 @@ interface ApiService {
 
     @GET("api/customer/{customerID}/requests/queue")
     suspend fun getCustomerQueue(@Path("customerID") customerID: Long): Response<QueueResponse>
+
+    // Raw GET: fetch payment info for a specific request; repository will leniently parse amount
+    @GET("api/requests/{requestID}/payment")
+    suspend fun getPaymentAmountRaw(
+        @Path("requestID") requestID: Long
+    ): Response<okhttp3.ResponseBody>
 }

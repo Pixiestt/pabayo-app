@@ -249,6 +249,7 @@ class RequestController extends Controller
                 'pickupDate'      => $newRequest->pickupDate ?? '',
                 'pickupTime'      => $newRequest->pickupTime ?? null, // NEW
                 'paymentMethod'   => $paymentName ?: '',
+                'paymentAmount'   => ($newRequest->payment ? $newRequest->payment->amount : null), // NEW
                 'deliveryDate'    => $newRequest->deliveryDate ?? '',
                 'sackQuantity'    => $newRequest->sackQuantity ?? 0,
                 'comment'         => $newRequest->comment ?? '',
@@ -397,6 +398,7 @@ class RequestController extends Controller
                 'pickupDate'       => $requestModel->pickupDate ?? '',
                 'pickupTime'       => $requestModel->pickupTime ?? null, // NEW
                 'paymentMethod'    => $paymentName ?: '',
+                'paymentAmount'    => ($requestModel->payment ? $requestModel->payment->amount : null), // NEW
                 'deliveryDate'     => $requestModel->deliveryDate ?? '',
                 'sackQuantity'     => $requestModel->sackQuantity ?? 0,
                 'comment'          => $requestModel->comment ?? '',
@@ -468,6 +470,7 @@ class RequestController extends Controller
                 'schedule'        => $req->pickupDate ?? 'Not set',
                 'pickupTime'      => $req->pickupTime ?? null, // NEW
                 'paymentMethod'   => $paymentName,
+                'paymentAmount'   => ($req->payment ? $req->payment->amount : null), // NEW
                 'comment'         => $req->comment,
                 'submittedAt'     => $req->dateCreated ?? $req->created_at?->toDateString(),
             ];
@@ -515,6 +518,7 @@ class RequestController extends Controller
                 'pickupDate'      => $req->pickupDate,
                 'pickupTime'      => $req->pickupTime ?? null, // NEW
                 'paymentMethod'   => $paymentName,
+                'paymentAmount'   => ($req->payment ? $req->payment->amount : null), // NEW
                 'deliveryDate'    => $req->deliveryDate,
                 'sackQuantity'    => $req->sackQuantity,
                 'comment'         => $req->comment,
@@ -571,6 +575,7 @@ class RequestController extends Controller
             'pickupDate'      => $requestModel->pickupDate ?? '',
             'pickupTime'      => $requestModel->pickupTime ?? null, // NEW
             'paymentMethod'   => $paymentName ?: '',
+            'paymentAmount'   => ($requestModel->payment ? $requestModel->payment->amount : null), // NEW
             'deliveryDate'    => $requestModel->deliveryDate ?? '',
             'sackQuantity'    => $requestModel->sackQuantity ?? 0,
             'comment'         => $requestModel->comment ?? '',
@@ -647,6 +652,7 @@ class RequestController extends Controller
             'pickupDate'      => $requestModel->pickupDate ?? '',
             'pickupTime'      => $requestModel->pickupTime ?? null, // NEW
             'paymentMethod'   => $paymentName ?: '',
+            'paymentAmount'   => ($requestModel->payment ? $requestModel->payment->amount : null), // NEW
             'deliveryDate'    => $requestModel->deliveryDate ?? '',
             'sackQuantity'    => $requestModel->sackQuantity ?? 0,
             'comment'         => $requestModel->comment ?? '',
@@ -703,6 +709,7 @@ class RequestController extends Controller
                     'pickupDate' => $req->pickupDate,
                     'pickupTime' => $req->pickupTime ?? null, // NEW
                     'paymentMethod' => $paymentName,
+                    'paymentAmount' => ($req->payment ? $req->payment->amount : null), // NEW
                     'deliveryDate' => $req->deliveryDate,
                     'sackQuantity' => $req->sackQuantity,
                     'comment' => $req->comment,
@@ -771,6 +778,7 @@ class RequestController extends Controller
                 'pickupLocation'   => $req->pickupLocation ?? '',
                 'deliveryLocation' => $req->deliveryLocation ?? '',
                 'paymentMethod'    => $paymentName,
+                'paymentAmount'    => ($req->payment ? $req->payment->amount : null), // NEW
                 'schedule'         => $req->pickupDate ?? 'Not set',
                 'dateUpdated'      => $req->dateUpdated,
             ];
@@ -886,6 +894,7 @@ class RequestController extends Controller
                     'pickupLocation'   => $req->pickupLocation ?? '',
                     'deliveryLocation' => $req->deliveryLocation ?? '',
                     'paymentMethod'    => ($req->payment && $req->payment->modeID == 1) ? 'Cash on Delivery' : (($req->payment && $req->payment->modeID == 2) ? 'Gcash' : ($req->payment->method->modeName ?? 'Unspecified')),
+                    'paymentAmount'    => ($req->payment ? $req->payment->amount : null), // NEW
                     'schedule'         => $req->pickupDate ?? 'Not set',
                     'dateUpdated'      => $req->dateUpdated,
                     'submittedAt'      => $req->dateCreated ?? ($req->created_at ? $req->created_at->toDateString() : null),
@@ -905,6 +914,91 @@ class RequestController extends Controller
                 'pending'    => [],
                 'processing' => [],
                 'error'      => 'Could not fetch queue',
+            ], 500);
+        }
+    }
+
+    public function setPaymentAmount($id, Request $request)
+    {
+        Log::info('➡️ setPaymentAmount() for requestID=' . $id);
+        try {
+            // 1) Validate
+            $validated = $request->validate([
+                'amount' => 'required|numeric|min:0|max:999999.99',
+            ]);
+            $amount = (float) $validated['amount'];
+
+            // 2) Load request with relations
+            $req = RequestModel::with(['service', 'payment'])->find($id);
+            if (!$req) {
+                Log::warning('setPaymentAmount: request not found: ' . $id);
+                return response()->json(['message' => 'Request not found'], 404);
+            }
+
+            // 3) Authorization: only the owner may set amount
+            $user = $request->user();
+            $serviceOwnerId = optional($req->service)->ownerID ?? $req->ownerID;
+            if ($user && isset($user->userID) && (int)$user->userID !== (int)$serviceOwnerId) {
+                Log::warning('setPaymentAmount: forbidden by user ' . ($user->userID ?? 'unknown') . ' for request ' . $id);
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
+
+            // 4) Ensure payment row exists
+            $payment = Payment::where('requestID', $req->requestID)->first();
+            if (!$payment) {
+                Log::info('setPaymentAmount: creating missing payment row for requestID=' . $req->requestID);
+                $existing = Payment::where('requestID', $req->requestID)->first();
+                $defaultModeId = $existing ? $existing->modeID : 1; // 1 = COD by your convention
+                $defaultStatus = $existing ? $existing->paymentStatusID : 1; // 1 = Pending
+                $payment = Payment::create([
+                    'requestID'       => $req->requestID,
+                    'modeID'          => $defaultModeId,
+                    'paymentStatusID' => $defaultStatus,
+                    'paymentDate'     => now(),
+                    'userID'          => $req->customerID,
+                    'amount'          => 0,
+                ]);
+            }
+
+            // 5) Update amount/date
+            $payment->amount = $amount;
+            $payment->paymentDate = now();
+            $payment->save();
+
+            // 6) Optional push to customer
+            try {
+                $this->pushStatusNotification($req, [
+                    'title' => 'Payment Amount Set',
+                    'body'  => 'Your milling fee has been set for request ID: ' . $req->requestID . '.',
+                    'data'  => [
+                        'event'  => 'payment_amount_set',
+                        'amount' => (string)$payment->amount,
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('setPaymentAmount: push failed: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'message' => 'Payment amount updated successfully',
+                'data'    => [
+                    'requestID' => $req->requestID,
+                    'amount'    => $payment->amount,
+                ],
+            ], 200);
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            Log::warning('setPaymentAmount: validation failed', $ve->errors());
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors'  => $ve->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            Log::error('setPaymentAmount failed for requestID=' . $id . ': ' . $e->getMessage());
+            Log::error('Trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'message'   => 'Failed to update payment amount',
+                'exception' => get_class($e),
+                'error'     => $e->getMessage(),
             ], 500);
         }
     }

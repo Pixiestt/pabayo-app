@@ -275,4 +275,18 @@
     <!-- New strings for status change timeline -->
     <string name="status_timeline_header">Status timeline</string>
     <string name="status_timeline_entry">%1$s — %2$s</string>
+
+    <!-- Added strings for owner-side payment amount input when marking Milling Done -->
+    <string name="set_payment_amount_title">Set Payment Amount</string>
+    <string name="set_payment_amount_message">Enter the total amount the customer has to pay based on the milled rice weight.</string>
+    <string name="enter_amount_hint">Amount (e.g., 1234.50)</string>
+    <string name="invalid_amount_message">Please enter a valid non-negative amount</string>
+    <string name="payment_amount_set_and_status_updated">Amount saved and status updated</string>
+    <string name="confirm">Confirm</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Payment amount display -->
+    <string name="label_payment_amount">Payment amount:</string>
+    <string name="payment_amount_format">Payment amount: ₱%1$.2f</string>
+    <string name="payment_amount_not_set">Payment amount: Not set</string>
 </resources>

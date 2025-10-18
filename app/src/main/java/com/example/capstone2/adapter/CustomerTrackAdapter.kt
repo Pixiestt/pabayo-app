@@ -24,8 +24,16 @@ class CustomerTrackAdapter(
         val requestId: TextView = itemView.findViewById(R.id.tvRequestID)
         val dateRequested: TextView = itemView.findViewById(R.id.tvDateRequested)
         val status: TextView = itemView.findViewById(R.id.tvStatus)
+        val tvPaymentAmount: TextView? = itemView.findViewById(R.id.tvPaymentAmount)
         val btnMarkComplete: Button = itemView.findViewById(R.id.btnMarkComplete)
         val btnMore: Button = itemView.findViewById(R.id.btnMore)
+    }
+
+    // Helper to parse formatted currency strings like "₱1,234.50" safely
+    private fun parseAmountStringSafe(raw: String?): Double? {
+        if (raw.isNullOrBlank()) return null
+        val cleaned = raw.replace(Regex("[^0-9.,-]"), "").replace(",", "")
+        return cleaned.toDoubleOrNull()
     }
 
     // Map status IDs to readable names based on the database status table
@@ -120,6 +128,19 @@ class CustomerTrackAdapter(
         val statusText = statusTextOf(request.statusID)
         holder.status.text = ctx.getString(R.string.status_format, statusText)
 
+        // NEW: show payment amount on customer row if available (robust fallbacks)
+        holder.tvPaymentAmount?.let { tv ->
+            val amt = request.paymentAmount
+                ?: request.payment?.amount
+                ?: parseAmountStringSafe(request.payment?.amountString)
+            tv.visibility = View.VISIBLE
+            if (amt != null && amt >= 0.0) {
+                tv.text = ctx.getString(R.string.payment_amount_format, amt)
+            } else {
+                tv.text = ctx.getString(R.string.payment_amount_not_set)
+            }
+        }
+
         // Persist status transition in local timeline whenever list binds
         try {
             // Ensure initial seed exists
@@ -192,16 +213,13 @@ class CustomerTrackAdapter(
         val btnClose: Button = dialog.findViewById(R.id.btnClose)
         val btnEdit: Button = dialog.findViewById(R.id.btnEdit)
         val btnMessage: Button? = dialog.findViewById(R.id.btnMessage)
-        // Ensure View Profile button (present in layout) is hidden for the customer "More" dialog
         val btnViewProfile: Button? = dialog.findViewById(R.id.btnViewProfile)
         btnViewProfile?.visibility = View.GONE
-        // New contact controls
         val tvDetailContact: TextView? = dialog.findViewById(R.id.tvDetailContact)
-        // NEW: last updated info below progress bar
         val tvStatusUpdatedAt: TextView? = dialog.findViewById(R.id.tvStatusUpdatedAt)
-        // NEW: timeline widgets
         val tvTimelineHeader: TextView? = dialog.findViewById(R.id.tvTimelineHeader)
         val llTimelineContainer: LinearLayout? = dialog.findViewById(R.id.llTimelineContainer)
+        val tvDetailPaymentAmount: TextView? = dialog.findViewById(R.id.tvDetailPaymentAmount)
 
         // Use formatted string resources to populate the dialog
         tvDetailCustomerName.text = context.getString(R.string.customer_format, request.customerName)
@@ -209,12 +227,25 @@ class CustomerTrackAdapter(
         tvDetailServices.text = context.getString(R.string.services_format, request.serviceName)
         tvDetailSchedule.text = context.getString(R.string.schedule_format, request.schedule ?: context.getString(R.string.not_set))
 
+        // Show payment amount in dialog if present (robust fallbacks)
+        tvDetailPaymentAmount?.let { tv ->
+            val amt = request.paymentAmount
+                ?: request.payment?.amount
+                ?: parseAmountStringSafe(request.payment?.amountString)
+            if (amt != null && amt >= 0.0) {
+                tv.visibility = View.VISIBLE
+                tv.text = context.getString(R.string.payment_amount_format, amt)
+            } else {
+                tv.visibility = View.VISIBLE
+                tv.text = context.getString(R.string.payment_amount_not_set)
+            }
+        }
+
         // Show pickup location if available or if service requires it
         if (!request.pickupLocation.isNullOrEmpty()) {
             tvDetailPickupLocation.text = context.getString(R.string.pickup_location_format, request.pickupLocation)
             tvDetailPickupLocation.visibility = View.VISIBLE
         } else {
-            // Check if service includes pickup (serviceID 1,2,5,6)
             when (request.serviceID) {
                 1L, 2L, 5L, 6L -> {
                     tvDetailPickupLocation.text = context.getString(
@@ -232,7 +263,6 @@ class CustomerTrackAdapter(
             tvDetailDeliveryLocation.text = context.getString(R.string.delivery_location_format, request.deliveryLocation)
             tvDetailDeliveryLocation.visibility = View.VISIBLE
         } else {
-            // Check if service includes delivery (serviceID 1,3,5,7)
             when (request.serviceID) {
                 1L, 3L, 5L, 7L -> {
                     tvDetailDeliveryLocation.text = context.getString(
@@ -326,8 +356,8 @@ class CustomerTrackAdapter(
             4 -> 40   // Pending
             5 -> 55   // Processing
             12 -> 70  // Milling done
-            6, 7 -> 85 // Rider out for delivery OR Waiting for customer to claim
-            13 -> 95  // Delivered
+            6-> 85 // Rider out for delivery
+            13 -> 100  // Delivered OR Waiting for customer to claim
             8 -> 100  // Completed
             9 -> 0    // Rejected
             else -> 0

@@ -10,6 +10,8 @@ import com.example.capstone2.data.models.Request
 import com.example.capstone2.repository.RequestRepository
 import com.example.capstone2.service.NotificationServiceFactory
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class OwnerRequestViewModel(
     private val repository: RequestRepository,
@@ -33,12 +35,21 @@ class OwnerRequestViewModel(
                 if (response.isSuccessful && response.body() != null) {
                     val requests = response.body()!!.requests
                     Log.d("OwnerRequestViewModel", "Fetched ${requests.size} requests successfully")
-                    _ownerRequests.value = requests
+                    // Enrich with payment amounts when missing
+                    val enriched = try {
+                        repository.enrichPaymentAmounts(requests)
+                    } catch (e: Exception) {
+                        Log.w("OwnerRequestViewModel", "enrichPaymentAmounts failed: ${e.message}")
+                        requests
+                    }
+                    _ownerRequests.value = enriched
                 } else {
                     Log.e("OwnerRequestViewModel", "Failed to fetch requests: ${response.code()} ${response.message()}")
+                    _ownerRequests.value = emptyList()
                 }
             } catch (e: Exception) {
                 Log.e("OwnerRequestViewModel", "Error fetching requests", e)
+                _ownerRequests.value = emptyList()
             } finally {
                 _isLoading.value = false
             }
@@ -163,6 +174,77 @@ class OwnerRequestViewModel(
         }
     }
     
+    // NEW: Set payment amount then update status in one flow
+    fun setPaymentAmountThenUpdateStatus(
+        requestID: Long,
+        amount: Double,
+        newStatusID: Int,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                Log.d("OwnerRequestViewModel", "Setting amount=$amount for request=$requestID then updating status to $newStatusID")
+                val setResp = repository.setPaymentAmount(requestID, amount)
+                if (!setResp.isSuccessful) {
+                    val msg = buildServerErrorMessage(setResp, fallback = "Failed to set payment amount (${setResp.code()})")
+                    onError(msg)
+                    return@launch
+                }
+
+                // Optimistically update local list with the new amount so UI reflects immediately
+                _ownerRequests.value = _ownerRequests.value?.map { existing ->
+                    if (existing.requestID == requestID) existing.copy(paymentAmount = amount) else existing
+                }
+
+                // Now update status
+                val updResp = repository.updateRequestStatus(requestID, newStatusID)
+                if (updResp.isSuccessful) {
+                    // Update cached list
+                    val updatedList = _ownerRequests.value?.map { existingRequest ->
+                        if (existingRequest.requestID == requestID) existingRequest.copy(statusID = newStatusID) else existingRequest
+                    }
+                    updatedList?.let { _ownerRequests.value = it }
+
+                    // Notify
+                    val request = _ownerRequests.value?.find { it.requestID == requestID }
+                    request?.let {
+                        val notificationService = NotificationServiceFactory.getInstance(getApplication())
+                        notificationService.notifyCustomerStatusUpdate(it, newStatusID)
+                    }
+                    onSuccess()
+                } else {
+                    val msg = buildServerErrorMessage(updResp, fallback = "Failed to update status after setting amount (${updResp.code()})")
+                    onError(msg)
+                }
+            } catch (e: Exception) {
+                Log.e("OwnerRequestViewModel", "Error setting amount then updating status", e)
+                onError("${e.localizedMessage}")
+            }
+        }
+    }
+
+    // Build a concise message from server error body if available
+    private fun buildServerErrorMessage(resp: retrofit2.Response<*>, fallback: String): String {
+        return try {
+            val err = resp.errorBody()?.string()?.trim()
+            if (!err.isNullOrEmpty()) {
+                // Try to extract a top-level "message" if it's JSON
+                val msg = try {
+                    val obj = com.google.gson.JsonParser.parseString(err).asJsonObject
+                    when {
+                        obj.has("message") -> obj.get("message").asString
+                        obj.has("error") -> obj.get("error").asString
+                        else -> null
+                    }
+                } catch (_: Exception) { null }
+                msg?.takeIf { it.isNotBlank() } ?: ("${fallback}: ${err.take(200)}")
+            } else fallback
+        } catch (_: Exception) {
+            fallback
+        }
+    }
+
     /**
      * Get text description for status ID
      */

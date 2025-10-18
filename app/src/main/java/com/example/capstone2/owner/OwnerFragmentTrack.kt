@@ -160,7 +160,7 @@ class OwnerFragmentTrack : Fragment(R.layout.owner_fragment_track) {
 
         trackAdapter = TrackAdapter(emptyList(), { request, newStatusID ->
             // Call a function to update status
-            updateRequestStatus(request.requestID, newStatusID)
+            updateRequestStatus(request, newStatusID)
         }, fetchContactCallback)
 
         recyclerView.adapter = trackAdapter
@@ -181,8 +181,13 @@ class OwnerFragmentTrack : Fragment(R.layout.owner_fragment_track) {
         ownerRequestViewModel.fetchOwnerRequests()
     }
 
-    private fun updateRequestStatus(requestID: Long, newStatusID: Int) {
-        ownerRequestViewModel.updateStatus(requestID, newStatusID,
+    private fun updateRequestStatus(request: Request, newStatusID: Int) {
+        // If updating to Milling done, prompt for payment amount first
+        if (newStatusID == 12) {
+            showAmountDialogAndProceed(request)
+            return
+        }
+        ownerRequestViewModel.updateStatus(request.requestID, newStatusID,
             onSuccess = {
                 Toast.makeText(requireContext(), "Status updated", Toast.LENGTH_SHORT).show()
                 ownerRequestViewModel.fetchOwnerRequests() // 🔁 Refresh from backend
@@ -191,6 +196,48 @@ class OwnerFragmentTrack : Fragment(R.layout.owner_fragment_track) {
                 Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
             }
         )
+    }
+
+    private fun showAmountDialogAndProceed(request: Request) {
+        val ctx = requireContext()
+        val input = android.widget.EditText(ctx).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            hint = getString(R.string.enter_amount_hint)
+        }
+        val container = android.widget.LinearLayout(ctx).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            val pad = (16 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad, pad, 0)
+            addView(input)
+        }
+        androidx.appcompat.app.AlertDialog.Builder(ctx)
+            .setTitle(getString(R.string.set_payment_amount_title))
+            .setMessage(getString(R.string.set_payment_amount_message))
+            .setView(container)
+            .setPositiveButton(R.string.confirm) { dialog, _ ->
+                val text = input.text?.toString()?.trim().orEmpty()
+                val amount = text.toDoubleOrNull()
+                if (amount == null || amount < 0.0) {
+                    Toast.makeText(ctx, getString(R.string.invalid_amount_message), Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                // Proceed: set amount then update status to 12
+                ownerRequestViewModel.setPaymentAmountThenUpdateStatus(
+                    requestID = request.requestID,
+                    amount = amount,
+                    newStatusID = 12,
+                    onSuccess = {
+                        Toast.makeText(ctx, getString(R.string.payment_amount_set_and_status_updated), Toast.LENGTH_SHORT).show()
+                        ownerRequestViewModel.fetchOwnerRequests()
+                    },
+                    onError = { err ->
+                        Toast.makeText(ctx, err, Toast.LENGTH_SHORT).show()
+                    }
+                )
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.cancel) { dialog, _ -> dialog.dismiss() }
+            .show()
     }
 
     // Recursively search JsonElement for common contact/phone fields and return the first match
