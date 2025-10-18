@@ -137,6 +137,35 @@
             android:layout_marginTop="8dp"
             android:visibility="gone" />
 
+        <!-- NEW: status last updated info, shown below progress bar -->
+        <TextView
+            android:id="@+id/tvStatusUpdatedAt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:visibility="gone"
+            android:text="" />
+
+        <!-- NEW: status change timeline header and container -->
+        <TextView
+            android:id="@+id/tvTimelineHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/status_timeline_header"
+            android:textStyle="bold"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/llTimelineContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="6dp"
+            android:visibility="gone" />
+
         <!-- Edit button (visible only when allowed) -->
         <Button
             android:id="@+id/btnEdit"

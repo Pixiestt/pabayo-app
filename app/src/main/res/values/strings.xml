@@ -104,14 +104,14 @@
     <string name="server_returned_raw">Server returned raw: %1$s</string>
 
     <!-- Labels used in owner track item layout -->
-    <string name="rb_delivery_boy_pickup">Delivery Boy Pickup</string>
-    <string name="rb_waiting_customer_dropoff">Waiting for Customer Drop Off</string>
+    <string name="rb_delivery_boy_pickup">Rider going for Pickup</string>
+    <string name="rb_waiting_customer_dropoff">Waiting for Customer to drop the Palay</string>
     <string name="rb_pending">Pending</string>
     <string name="rb_processing">Processing</string>
     <string name="rb_out_for_delivery">Out for Delivery</string>
     <string name="rb_milling_done">Milling Done</string>
     <string name="rb_delivered">Delivered</string>
-    <string name="rb_waiting_customer_pickup">Waiting for Customer Pickup</string>
+    <string name="rb_waiting_customer_pickup">Waiting for Customer to claim</string>
     <string name="submit">Submit</string>
 
     <!-- Add title string used in owner fragment -->
@@ -259,7 +259,7 @@
     <string name="debug_other_statuses_present">(debug) Other statuses present: %1$s</string>
 
     <!-- Indicate when only the current customer’s requests are being shown due to global access not being available -->
-    <string name="queue_scope_customer_only">Showing your requests (global queue unavailable for this account)</string>
+    <string name="queue_scope_customer_only">Showing your requests</string>
 
     <string name="total_processing_count">Total: %1$d</string>
     <string name="total_pending_count">Total: %1$d</string>
@@ -268,4 +268,11 @@
     <string name="hint_pickup_time">Select pickup time</string>
 
     <string name="beams_instance_id">REPLACE_WITH_YOUR_BEAMS_INSTANCE_ID</string>
+
+    <!-- New string for status-updated timestamp in customer details dialog -->
+    <string name="status_updated_at">Status updated: %1$s</string>
+
+    <!-- New strings for status change timeline -->
+    <string name="status_timeline_header">Status timeline</string>
+    <string name="status_timeline_entry">%1$s — %2$s</string>
 </resources>

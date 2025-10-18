@@ -83,14 +83,14 @@ class DeliveryCardAdapter(
 
         // Configure buttons depending on mode
         if (mode == DeliveryMode.PICKUPS) {
-            val canInitiate = req.statusID == 10
+            val canInitiate = req.statusID == 10 || req.statusID == 11
             val isOngoing = req.statusID == 2
 
             holder.btnInitiate.isEnabled = canInitiate
             holder.btnDone.isEnabled = isOngoing
 
             holder.btnInitiate.setOnClickListener {
-                // Update status to "delivery boy pickup" (2)
+                // Optimistic UI updates; actual network handled by fragment via callback
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         requestRepository.updateRequestStatus(req.requestID, 2)
@@ -98,6 +98,7 @@ class DeliveryCardAdapter(
                         Log.e("DeliveryCardAdapter", "Failed to update pickup status", e)
                     }
                 }
+                // Optimistic UI updates; actual network handled by fragment via callback
                 holder.tvStatusLabel.text = ongoingText
                 holder.btnInitiate.isEnabled = false
                 holder.btnDone.isEnabled = true
@@ -125,16 +126,12 @@ class DeliveryCardAdapter(
             holder.btnDone.text = ctx.getString(R.string.action_delivery_done)
 
             val statusText = when (req.statusID) {
-                12 -> ctx.getString(R.string.status_milling_ready_delivery)
-                6 -> ctx.getString(R.string.status_ongoing_delivery)
                 13 -> ctx.getString(R.string.status_delivery_done)
+                6 -> ctx.getString(R.string.status_ongoing_delivery)
                 else -> pendingText
             }
             holder.tvStatusLabel.text = statusText
-
-            // Only enable "Initiate Delivery" if statusID = 12 (Milling done)
-            holder.btnInitiate.isEnabled = req.statusID == 12
-            // "Delivery Done" is only enabled if statusID = 6 (Rider out for delivery)
+            holder.btnInitiate.isEnabled = req.statusID != 6 && req.statusID != 13
             holder.btnDone.isEnabled = req.statusID == 6
 
             holder.btnInitiate.setOnClickListener {

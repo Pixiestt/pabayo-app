@@ -118,11 +118,14 @@ class TrackAdapter(
 
         val includesPickup = req.serviceID in listOf(1L, 2L, 5L, 6L)
         val includesDelivery = req.serviceID in listOf(1L, 3L, 5L, 7L)
-        val terminalStatuses = setOf(8, 9, 12, 13)
+        // 12 (Milling done) should not be terminal for non-delivery services because we need to move to 7 (Waiting for customer to claim)
+        val terminalStatuses = setOf(8, 9, 13)
 
         // Compute next status strictly following owner-side rules
         val nextStatus: Int? = when {
             currentStatus in terminalStatuses -> null
+            // New rule: If there's no delivery and we're at Milling done, next is Waiting for customer to claim (7)
+            !includesDelivery && currentStatus == 12 -> 7
             includesPickup -> when (currentStatus) {
                 10 -> null
                 4 -> 5
@@ -145,6 +148,7 @@ class TrackAdapter(
             3 to holder.rbCDropoff,
             4 to holder.rbPending,
             5 to holder.rbProcessing,
+            7 to holder.rbCPickup,
             12 to holder.rbMillingDone
         )
 
@@ -178,6 +182,7 @@ class TrackAdapter(
                 holder.rbCDropoff.id to 3,
                 holder.rbPending.id to 4,
                 holder.rbProcessing.id to 5,
+                holder.rbCPickup.id to 7,
                 holder.rbMillingDone.id to 12
             )
 
@@ -192,8 +197,8 @@ class TrackAdapter(
             }
         }
 
-        // Row-level Message button: show only when Milling done
-        if (currentStatus == 12) {
+        // Row-level Message button: show only when Waiting for customer to claim (status 7)
+        if (currentStatus == 7) {
             holder.btnRowMessage?.visibility = View.VISIBLE
             holder.btnRowMessage?.setOnClickListener {
                 val context = holder.itemView.context
@@ -298,8 +303,8 @@ class TrackAdapter(
             // Close button
             btnClose.setOnClickListener { dialog.dismiss() }
 
-            // Show Message button in dialog only when Milling done
-            if (currentStatus == 12) {
+            // Show Message button in dialog only when Waiting for customer to claim (status 7)
+            if (currentStatus == 7) {
                 btnMsg.visibility = View.VISIBLE
                 btnMsg.setOnClickListener {
                     val context = dlgView.context

@@ -1,6 +1,14 @@
 package com.example.capstone2.repository
 
 import android.content.Context
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 object SharedPrefManager {
     private const val PREFS_NAME = "capstone_prefs"
@@ -254,6 +262,123 @@ object SharedPrefManager {
         try {
             val p2 = ctx.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
             p2.edit().putBoolean(KEY_FORCE_LOCAL_NOTIFICATIONS, enabled).apply()
+        } catch (_: Exception) { }
+    }
+
+    // --- Request status history (local timeline) ---
+    data class StatusChangeEntry(val statusID: Int, val statusText: String, val at: String)
+
+    // Correct per-request key (BUGFIX: previously used a literal "$requestId" string, causing a single shared bucket)
+    private fun keyHistory(requestId: Long) = "request_history_${requestId}"
+
+    // Old buggy key was the literal string below. Purge it once to avoid showing mixed history.
+    private const val BAD_HISTORY_KEY = "request_history_\$requestId"
+
+    private fun purgeBuggyGlobalHistoryIfPresent(ctx: Context) {
+        try {
+            val p = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            if (p.contains(BAD_HISTORY_KEY)) {
+                p.edit().remove(BAD_HISTORY_KEY).apply()
+            }
+        } catch (_: Exception) { }
+    }
+
+    /**
+     * Return the locally stored status history for a given request, oldest->newest.
+     */
+    fun getRequestStatusHistory(ctx: Context, requestId: Long): List<StatusChangeEntry> {
+        purgeBuggyGlobalHistoryIfPresent(ctx)
+        return try {
+            val p = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val json = p.getString(keyHistory(requestId), null) ?: return emptyList()
+            val type = object : TypeToken<List<StatusChangeEntry>>() {}.type
+            Gson().fromJson<List<StatusChangeEntry>>(json, type) ?: emptyList()
+        } catch (_: Exception) { emptyList() }
+    }
+
+    /**
+     * Overwrite the history list for a request.
+     */
+    private fun saveRequestStatusHistory(ctx: Context, requestId: Long, history: List<StatusChangeEntry>) {
+        purgeBuggyGlobalHistoryIfPresent(ctx)
+        try {
+            val p = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            p.edit().putString(keyHistory(requestId), Gson().toJson(history)).apply()
+        } catch (_: Exception) { }
+    }
+
+    /**
+     * Try to parse a time string into epoch millis for comparison.
+     * Accepts offset/Z ISO or local date-time without offset (treated as local zone; if that fails, try UTC).
+     */
+    private fun parseEpochMillisFlexible(s: String?): Long? {
+        if (s.isNullOrBlank()) return null
+        val t = s.trim()
+        // Try offset/Z first
+        try {
+            val odt = OffsetDateTime.parse(t, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            return odt.toInstant().toEpochMilli()
+        } catch (_: Exception) { }
+        // Try local date-time as system zone
+        try {
+            val ldt = LocalDateTime.parse(t.replace('T',' '), java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS][.SSSSSS]"))
+            return ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        } catch (_: Exception) { }
+        // Fallback: try local date-time as UTC
+        try {
+            val ldt = LocalDateTime.parse(t.replace('T',' '), java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS][.SSSSSS]"))
+            return ldt.atZone(ZoneOffset.UTC).toInstant().toEpochMilli()
+        } catch (_: Exception) { }
+        return null
+    }
+
+    /**
+     * Append an entry if the last stored statusID differs. Returns updated list.
+     * If there is no history yet, initializes it with the provided entry.
+     * If the new statusID is the same but the provided changedAtIso is later than the stored time, update the last entry's timestamp (and text if it differs).
+     */
+    fun appendStatusIfChanged(
+        ctx: Context,
+        requestId: Long,
+        newStatusId: Int,
+        newStatusText: String,
+        changedAtIso: String
+    ): List<StatusChangeEntry> {
+        purgeBuggyGlobalHistoryIfPresent(ctx)
+        val current = getRequestStatusHistory(ctx, requestId).toMutableList()
+        if (current.isEmpty()) {
+            current.add(StatusChangeEntry(newStatusId, newStatusText, changedAtIso))
+            saveRequestStatusHistory(ctx, requestId, current)
+            return current
+        }
+        val last = current.last()
+        if (last.statusID != newStatusId) {
+            current.add(StatusChangeEntry(newStatusId, newStatusText, changedAtIso))
+            saveRequestStatusHistory(ctx, requestId, current)
+        } else {
+            // Same statusID: if label changed, update it; also bump time if newer
+            var updated = false
+            if (last.statusText != newStatusText) {
+                current[current.lastIndex] = last.copy(statusText = newStatusText)
+                updated = true
+            }
+            val lastAtMs = parseEpochMillisFlexible(last.at)
+            val newAtMs = parseEpochMillisFlexible(changedAtIso)
+            if (newAtMs != null && (lastAtMs == null || newAtMs > lastAtMs)) {
+                current[current.lastIndex] = current.last().copy(at = changedAtIso)
+                updated = true
+            }
+            if (updated) saveRequestStatusHistory(ctx, requestId, current)
+        }
+        return current
+    }
+
+    /** Utility to clear a specific request's history (debug/reset). */
+    fun clearRequestStatusHistory(ctx: Context, requestId: Long) {
+        purgeBuggyGlobalHistoryIfPresent(ctx)
+        try {
+            val p = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            p.edit().remove(keyHistory(requestId)).apply()
         } catch (_: Exception) { }
     }
 }
