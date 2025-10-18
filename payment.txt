@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Payment extends Model
+{
+    protected $table = 'payments_tbl'; // match your actual table name
+
+    // Use the correct primary key column name (default is 'id')
+    protected $primaryKey = 'paymentID';
+
+    // Primary key is auto-incrementing BIGINT
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    protected $fillable = [
+        'requestID',
+        'modeID', 
+        'paymentStatusID', 
+        'paymentDate',
+        'userID',
+        'amount',
+    ];
+
+
+    public function method()
+    {
+        return $this->belongsTo(\App\Models\PaymentMethod::class, 'modeID', 'modeID');
+    }
+
+    public $timestamps = false; // Disable timestamps if not used
+}

@@ -11,6 +11,9 @@ import retrofit2.Response
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import java.io.StringReader
 
 
@@ -21,6 +24,8 @@ class RequestRepository(private val apiService: ApiService) {
         private val customerRequestsCache: MutableMap<Long, String> = mutableMapOf()
         // Cache for owner requests raw JSON
         private var ownerRequestsCache: String? = null
+        // Cache requestID -> payment amount to avoid repeated fetches
+        private val paymentAmountCache: MutableMap<Long, Double> = mutableMapOf()
     }
 
     suspend fun createRequest(request: CreateRequest): Response<ResponseBody> {
@@ -121,6 +126,15 @@ class RequestRepository(private val apiService: ApiService) {
         return apiService.updateRequestStatus(requestId, statusId)
     }
 
+    // NEW: set or update the payment amount for a request
+    suspend fun setPaymentAmount(requestId: Long, amount: Double): Response<ResponseBody> {
+        Log.d("RequestRepository", "Setting payment amount for request ID: $requestId to $amount")
+        val body = mapOf(
+            "amount" to amount
+        )
+        return apiService.setPaymentAmount(requestId, body)
+    }
+
     suspend fun getCustomerRequests(customerID: Long): Response<List<Request>> {
         Log.d("RequestRepository", "Getting customer requests for customerID: $customerID")
         val maxAttempts = 2
@@ -215,6 +229,168 @@ class RequestRepository(private val apiService: ApiService) {
         throw Exception("Failed to fetch customer requests and no cache available")
     }
 
+    /** Try to parse a numeric amount from a possibly formatted string (e.g., "₱1,234.50"). */
+    private fun parseAmountStringSafe(raw: String?): Double? {
+        if (raw.isNullOrBlank()) return null
+        val cleaned = raw.replace(Regex("[^0-9.,-]"), "").replace(",", "")
+        return cleaned.toDoubleOrNull()
+    }
+
+    /** Recursively search a JSON element for a likely payment amount field. */
+    private fun extractAmountRecursive(elem: JsonElement?): Double? {
+        if (elem == null || elem.isJsonNull) return null
+        try {
+            if (elem.isJsonPrimitive) {
+                val prim = elem.asJsonPrimitive
+                if (prim.isNumber) return prim.asDouble
+                if (prim.isString) return parseAmountStringSafe(prim.asString)
+            }
+            if (elem.isJsonObject) {
+                val obj = elem.asJsonObject
+                // Common keys
+                val keys = listOf(
+                    "paymentAmount", "payment_amount", "amount", "price", "total", "total_amount", "payable", "balance"
+                )
+                for (k in keys) {
+                    if (obj.has(k) && !obj.get(k).isJsonNull) {
+                        val d = extractAmountRecursive(obj.get(k))
+                        if (d != null) return d
+                    }
+                }
+                // Check nested payment object
+                val nests = listOf("payment", "details", "data", "attributes")
+                for (nk in nests) {
+                    if (obj.has(nk)) {
+                        val d = extractAmountRecursive(obj.get(nk))
+                        if (d != null) return d
+                    }
+                }
+                // Also try scanning all entries
+                for ((_, v) in obj.entrySet()) {
+                    val d = extractAmountRecursive(v)
+                    if (d != null) return d
+                }
+            }
+            if (elem.isJsonArray) {
+                for (el in elem.asJsonArray) {
+                    val d = extractAmountRecursive(el)
+                    if (d != null) return d
+                }
+            }
+        } catch (_: Exception) {}
+        return null
+    }
+
+    /**
+     * Fetch payment amount for a single request by trying a few common endpoints and
+     * extracting a numeric amount using lenient parsing.
+     */
+    suspend fun fetchPaymentAmount(requestId: Long): Double? {
+        // Return cached if present
+        paymentAmountCache[requestId]?.let { return it }
+
+        // 1) Preferred: dedicated raw endpoint (if backend supports it)
+        try {
+            val resp = apiService.getPaymentAmountRaw(requestId)
+            if (resp.isSuccessful) {
+                val body = resp.body()?.string()?.trim()
+                if (!body.isNullOrBlank()) {
+                    val root = try { JsonParser.parseString(body) } catch (_: Exception) { null }
+                    val amt = extractAmountRecursive(root)
+                    if (amt != null && amt >= 0.0) {
+                        paymentAmountCache[requestId] = amt
+                        Log.d("RequestRepository", "Fetched payment amount for $requestId via dedicated endpoint = $amt")
+                        return amt
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.d("RequestRepository", "getPaymentAmountRaw threw ${e.message}")
+        }
+
+        // 2) Fallback: try a few common endpoint patterns
+        val paths = listOf(
+            "api/requests/$requestId",
+            "api/requests/$requestId/payment",
+            "api/request/$requestId",
+            "api/request/$requestId/payment",
+            "api/orders/$requestId",
+            "api/orders/$requestId/payment"
+        )
+        for (p in paths) {
+            try {
+                val resp = apiService.getRaw(p)
+                if (!resp.isSuccessful) continue
+                val body = resp.body()?.string()?.trim()
+                if (body.isNullOrBlank()) continue
+                val root = try { JsonParser.parseString(body) } catch (_: Exception) { null }
+                val amt = extractAmountRecursive(root)
+                if (amt != null && amt >= 0.0) {
+                    paymentAmountCache[requestId] = amt
+                    Log.d("RequestRepository", "Fetched payment amount for $requestId via $p = $amt")
+                    return amt
+                }
+            } catch (e: Exception) {
+                Log.d("RequestRepository", "fetchPaymentAmount path $p threw ${e.message}")
+            }
+        }
+        return null
+    }
+
+    /**
+     * Given a list of requests, fetch and fill missing payment amounts for those at or beyond
+     * status 12 (Milling done) or 13 (Delivered). Returns a new list with updates applied.
+     */
+    suspend fun enrichPaymentAmounts(requests: List<Request>): List<Request> {
+        if (requests.isEmpty()) return requests
+        val needs = requests.filter { r ->
+            (r.paymentAmount == null && (r.payment?.amount == null))
+        }
+        if (needs.isEmpty()) return requests
+        val updates = mutableMapOf<Long, Double>()
+        for (r in needs) {
+            try {
+                val amt = fetchPaymentAmount(r.requestID)
+                if (amt != null && amt >= 0.0) updates[r.requestID] = amt
+            } catch (_: Exception) {}
+        }
+        if (updates.isEmpty()) return requests
+        return requests.map { r ->
+            val a = updates[r.requestID]
+            if (a != null) r.copy(statusID = r.statusID, paymentAmount = a) else r
+        }
+    }
+
+    // Fetch delivery boy requests
+    suspend fun getDeliveryBoyRequests(): List<Request> {
+        val resp = apiService.getDeliveryBoyRequests() // use apiService instead of api
+        if (resp.isSuccessful) {
+            return resp.body()?.requests ?: emptyList()
+        } else {
+            throw Exception("Failed to fetch delivery boy requests: ${resp.code()}")
+        }
+    }
+
+    suspend fun markPickupDone(requestId: Long): Response<ResponseBody> {
+        Log.d("RequestRepository", "Courier marking pickup done for request ID: $requestId")
+        return apiService.markPickupDone(requestId)
+    }
+
+    // New: fetch all requests filtered by status ID, if supported by backend
+    suspend fun getRequestsByStatus(statusID: Int): Response<RequestResponse> {
+        return apiService.getRequestsByStatus(statusID)
+    }
+
+    // New: fetch all requests filtered by status name (e.g., "pending"), if supported by backend
+    suspend fun getRequestsByStatusName(status: String): Response<RequestResponse> {
+        return apiService.getRequestsByStatusName(status)
+    }
+
+    suspend fun getCustomerQueue(customerID: Long): Response<QueueResponse> {
+        Log.d("RequestRepository", "Getting queue for customerID: $customerID")
+        return apiService.getCustomerQueue(customerID)
+    }
+
     /**
      * Try to recover from truncated/malformed JSON arrays by simple heuristics:
      * - Trim surrounding whitespace
@@ -249,7 +425,7 @@ class RequestRepository(private val apiService: ApiService) {
         s = s.replace(Regex(",\\s*" + java.util.regex.Pattern.quote("}")), "}")
         // If the top-level does not contain "requests" but contains an array field, try to find it
         if (!s.contains("\"requests\"")) {
-            // Best-effort: if it contains a top-level field whose value is an array, wrap it
+            // Best-effort: if it contains a top-level field whose value is an array, try to find it
             val arrayMatch = Regex("(\"[a-zA-Z0-9_]+\"\\s*:\\s*\\[)")
             val m = arrayMatch.find(s)
             if (m != null) {
@@ -259,35 +435,4 @@ class RequestRepository(private val apiService: ApiService) {
         }
         return s
     }
-
-    // Fetch delivery boy requests
-    suspend fun getDeliveryBoyRequests(): List<Request> {
-        val resp = apiService.getDeliveryBoyRequests() // use apiService instead of api
-        if (resp.isSuccessful) {
-            return resp.body()?.requests ?: emptyList()
-        } else {
-            throw Exception("Failed to fetch delivery boy requests: ${resp.code()}")
-        }
-    }
-
-    suspend fun markPickupDone(requestId: Long): Response<ResponseBody> {
-        Log.d("RequestRepository", "Courier marking pickup done for request ID: $requestId")
-        return apiService.markPickupDone(requestId)
-    }
-
-    // New: fetch all requests filtered by status ID, if supported by backend
-    suspend fun getRequestsByStatus(statusID: Int): Response<RequestResponse> {
-        return apiService.getRequestsByStatus(statusID)
-    }
-
-    // New: fetch all requests filtered by status name (e.g., "pending"), if supported by backend
-    suspend fun getRequestsByStatusName(status: String): Response<RequestResponse> {
-        return apiService.getRequestsByStatusName(status)
-    }
-
-    suspend fun getCustomerQueue(customerID: Long): Response<QueueResponse> {
-        Log.d("RequestRepository", "Getting queue for customerID: $customerID")
-        return apiService.getCustomerQueue(customerID)
-    }
-
 }

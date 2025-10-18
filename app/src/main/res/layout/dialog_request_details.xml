@@ -78,6 +78,15 @@
             android:text="@string/label_submitted_at"
             android:layout_marginTop="8dp" />
 
+        <!-- NEW: Payment amount row; visibility toggled in code -->
+        <TextView
+            android:id="@+id/tvDetailPaymentAmount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/payment_amount_not_set"
+            android:visibility="gone" />
+
         <!-- Contact row: visible when contact info is known or loading -->
         <TextView
             android:id="@+id/tvDetailContact"

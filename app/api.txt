@@ -18,10 +18,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile', [App\Http\Controllers\API\AuthController::class, 'updateProfile']);
     Route::put('/profile/password', [App\Http\Controllers\API\AuthController::class, 'changePassword']);
 
-
-
-
-
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::post('/requests', [RequestController::class, 'store']);
@@ -30,62 +26,34 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/requests/{id}/accept', [RequestController::class, 'accept']);
     Route::post('/requests/{id}/reject', [RequestController::class, 'reject']);
 
-    //changes
-
-    // Route::get('/requests/trackable', [RequestController::class, 'trackableRequests']);
-
-    //part 2
+    // New: owner sets payment amount for a request
+    Route::put('/requests/{id}/payment', [RequestController::class, 'setPaymentAmount']);
 
     Route::put('/requests/{id}/status/{status}', [RequestController::class, 'updateRequestStatus']);
 
-    // Route::put('/requests/{id}/status/{status}', [RequestController::class, 'updateStatus']);
-
-
-    //ai suggestion
-
     Route::get('/customer/{customerID}/requests', [RequestController::class, 'getCustomerRequests']);
 
-
-
-
-    // eto yung sa edit button
-
-
+    // edit button
     Route::middleware('auth:sanctum')->put('requests/{id}', [RequestController::class, 'update']);
 
-
-
     // message routes
-
     Route::post('/messages/send', [MessageController::class, 'store']);
     Route::get('/messages/conversation', [MessageController::class, 'conversation']);
     Route::get('/messages/conversations', [MessageController::class, 'conversations']);
     Route::post('/messages/mark_read', [MessageController::class, 'markRead']);
     Route::delete('/messages/{id}', [MessageController::class, 'destroy']);
 
-
-
     //notifications
-
-
     Route::post('/pusher/beams-auth', [App\Http\Controllers\API\AuthController::class, 'beamsAuth']);
 
-
-
-    //contact nnumber
+    //contact number
     Route::get('users/{userID}', [UserController::class, 'show']);
-
-
 
     // delivery boy
     Route::put('/requests/{id}/initiate', [RequestController::class, 'initiatePickup']);
     Route::post('/requests/{id}/pickup-done', [RequestController::class, 'markPickupDone']);
 
     Route::get('/deliveryboy/requests', [RequestController::class, 'getDeliveryBoyRequests']);
-
-
-
-
 
 
     Route::get('/customer/{customerID}/requests', [RequestController::class, 'getCustomerRequests']);

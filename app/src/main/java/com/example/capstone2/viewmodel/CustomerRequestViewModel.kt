@@ -83,7 +83,14 @@ class CustomerRequestViewModel(private val repository: RequestRepository) : View
                     Log.d("CustomerViewModel", "Received ${requests.size} requests")
                     // Keep all except completed (8) and rejected (9)
                     val filtered = requests.filter { it.statusID != 8 && it.statusID != 9 }
-                    _customerRequests.value = filtered
+                    // Enrich with payment amount when missing
+                    val enriched = try {
+                        repository.enrichPaymentAmounts(filtered)
+                    } catch (e: Exception) {
+                        Log.w("CustomerViewModel", "enrichPaymentAmounts failed: ${e.message}")
+                        filtered
+                    }
+                    _customerRequests.value = enriched
                 } else {
                     Log.e(
                         "CustomerViewModel",

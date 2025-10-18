@@ -97,6 +97,15 @@
                 android:layout_marginTop="6dp"
                 android:layout_marginBottom="8dp" />
 
+            <!-- NEW: Payment amount line -->
+            <TextView
+                android:id="@+id/tvPaymentAmount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/payment_amount_not_set"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp" />
+
             <!-- Divider below current status -->
             <View
                 android:layout_width="match_parent"
