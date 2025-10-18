@@ -90,4 +90,7 @@ class OwnerHistoryAdapter(
         completedRequests = newRequests
         notifyDataSetChanged()
     }
+
+    // New: expose a read-only copy of the current list for exporting
+    fun getRequests(): List<Request> = completedRequests
 }

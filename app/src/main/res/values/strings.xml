@@ -303,4 +303,19 @@
     <string name="rate_per_kilo_note">Rate: ₱10.00 / kilo</string>
     <string name="invalid_kg_message">Please enter a valid milled weight in kilograms</string>
     <string name="milled_kg_format">Total rice kg: %1$.2f kg</string>
+
+    <!-- Export to PDF strings -->
+    <string name="action_export_pdf">Export PDF</string>
+    <string name="export_pdf_empty">Nothing to export</string>
+    <string name="export_pdf_success">Saved to Downloads: %1$s</string>
+    <string name="export_pdf_error">Failed to save PDF</string>
+    <string name="storage_permission_required">Storage permission is required to save PDF</string>
+
+    <!-- Filter menu and dialogs for Owner History -->
+    <string name="filter_by_date_range">Filter by date range</string>
+    <string name="filter_by_customer_name">Filter by customer name</string>
+    <string name="filter_by_request_id">Filter by request ID</string>
+    <string name="enter_customer_name">Enter customer name</string>
+    <string name="enter_request_id">Enter request ID</string>
+    <string name="apply">Apply</string>
 </resources>
