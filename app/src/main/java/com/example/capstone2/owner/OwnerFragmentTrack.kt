@@ -1,6 +1,5 @@
 package com.example.capstone2.owner
 
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -182,8 +181,8 @@ class OwnerFragmentTrack : Fragment(R.layout.owner_fragment_track) {
     }
 
     private fun updateRequestStatus(request: Request, newStatusID: Int) {
-        // If updating to Milling done, prompt for kg first and auto-calc amount
-        if (newStatusID == 12) {
+        // If updating to Processing, prompt for kg first and auto-calc amount
+        if (newStatusID == 5) {
             showKgAndAmountDialogAndProceed(request)
             return
         }
@@ -254,12 +253,12 @@ class OwnerFragmentTrack : Fragment(R.layout.owner_fragment_track) {
                     Toast.makeText(ctx, getString(R.string.invalid_amount_message), Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-                // Proceed: set kg + amount then update status to 12
+                // Proceed: set kg + amount then update status to 5 (Processing)
                 ownerRequestViewModel.setMilledAndPaymentThenUpdateStatus(
                     requestID = request.requestID,
                     milledKg = kg,
                     amount = amount,
-                    newStatusID = 12,
+                    newStatusID = 5,
                     onSuccess = {
                         Toast.makeText(ctx, getString(R.string.payment_amount_set_and_status_updated), Toast.LENGTH_SHORT).show()
                         ownerRequestViewModel.fetchOwnerRequests()
@@ -270,7 +269,7 @@ class OwnerFragmentTrack : Fragment(R.layout.owner_fragment_track) {
                         ownerRequestViewModel.setPaymentAmountThenUpdateStatus(
                             requestID = request.requestID,
                             amount = amount,
-                            newStatusID = 12,
+                            newStatusID = 5,
                             onSuccess = {
                                 Toast.makeText(ctx, getString(R.string.payment_amount_set_and_status_updated), Toast.LENGTH_SHORT).show()
                                 ownerRequestViewModel.fetchOwnerRequests()
